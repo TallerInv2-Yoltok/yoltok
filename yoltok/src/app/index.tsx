@@ -66,7 +66,7 @@ export default function Categorias() {
       ) : (
         <ScrollView contentContainerStyle={styles.contenido}>
           <Text style={styles.titulo}>¿Qué quieres aprender?</Text>
-          <Text style={styles.subtitulo}>Elige una categoría para empezar tu ruta en náhuat.</Text>
+          <Text style={styles.subtitulo}>Elige una categoría para empezar tu ruta en náhuatl.</Text>
           <View style={styles.rejilla}>
             {tarjetas.map((t, i) => {
               const tono = TONOS[i % TONOS.length]

@@ -29,7 +29,7 @@ export default function Leccion() {
   const [resultado, setResultado] = useState<Resultado | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [guardado, setGuardado] = useState<'no' | 'guardando' | 'si' | 'error'>('no')
-  const [inicio] = useState(() => Date.now())
+  const [inicio, setInicio] = useState(() => Date.now())
   const [segundos, setSegundos] = useState(0)
 
   useEffect(() => {
@@ -47,7 +47,11 @@ export default function Leccion() {
       if (!lista.length) return setError('Esta lección todavía no tiene ejercicios.')
       setEjercicios(Object.fromEntries(lista.map((x) => [x.id, x])))
       setSesion(nuevaSesion(lista))
-      setPerfil(u.data)
+      // Si salió de una lección con 0 vidas, empieza esta con 5.
+      if (u.data?.vidas === 0) {
+        setPerfil({ puntos: u.data.puntos, vidas: 5 })
+        supabase.from('usuarios').update({ vidas: 5 }).eq('id', userId).then()
+      } else setPerfil(u.data)
     })
   }, [id, userId])
 
@@ -84,16 +88,34 @@ export default function Leccion() {
   function evaluar(correcto: boolean, detalle: string) {
     setResultado({ correcto, detalle })
     if (!correcto && perfil) {
-      // Las vidas bajan 1 por intento fallido (también en emparejar) y no bloquean; se recargan al terminar.
+      // Las vidas bajan 1 por intento fallido (también en emparejar); en 0 la lección se reinicia.
       const vidas = Math.max(0, perfil.vidas - 1)
       setPerfil({ ...perfil, vidas })
       supabase.from('usuarios').update({ vidas }).eq('id', userId).then()
     }
   }
 
+  function reiniciar() {
+    if (!ejercicios || !perfil) return
+    setPerfil({ ...perfil, vidas: 5 })
+    supabase.from('usuarios').update({ vidas: 5 }).eq('id', userId).then()
+    setSesion(nuevaSesion(Object.values(ejercicios)))
+    setResultado(null)
+    setInicio(Date.now())
+  }
+
   function continuar() {
     // Chequeo explícito en vez de `!`: el React Compiler lee `resultado!.correcto` al renderizar y truena si es null.
-    if (!resultado || !sesion || !ejercicios) return
+    if (!resultado || !sesion || !ejercicios || !perfil) return
+    if (!resultado.correcto && perfil.vidas === 0) {
+      Alert.alert(
+        '¡Se agotaron tus vidas!',
+        'La lección se reiniciará desde el principio y recuperarás tus 5 corazones.',
+        [{ text: 'Reiniciar lección', onPress: reiniciar }],
+        { cancelable: false },
+      )
+      return
+    }
     const nueva = responder(sesion, ejercicios[sesion.cola[0]], resultado.correcto)
     setSesion(nueva)
     setResultado(null)
@@ -319,7 +341,7 @@ function Victoria({ sesion, ejercicios, segundos, guardado, reintentar }: {
         </View>
         <Text style={styles.finalizada}>LECCIÓN FINALIZADA</Text>
         <Text style={styles.victoriaTitulo}>¡Módulo completado!</Text>
-        <Text style={styles.victoriaTexto}>Has practicado con éxito el vocabulario básico de náhuat del sur de Veracruz.</Text>
+        <Text style={styles.victoriaTexto}>Has practicado con éxito el vocabulario básico de náhuatl del sur de Veracruz.</Text>
 
         <View style={styles.stats}>
           <Stat titulo="XP GANADOS" valor={`+${sesion.xp}`} icono="lightning-bolt" color={colors.tertiary} fondo={colors.tertiaryTint} />
@@ -345,7 +367,10 @@ function Victoria({ sesion, ejercicios, segundos, guardado, reintentar }: {
           {guardado === 'error' ? (
             <Button title="Reintentar guardar" onPress={reintentar} />
           ) : (
-            <Button title={guardado === 'si' ? 'Continuar' : 'Guardando…'} disabled={guardado !== 'si'} onPress={() => router.back()} />
+            <>
+              <Button title={guardado === 'si' ? 'Evaluar usabilidad de la app' : 'Guardando…'} disabled={guardado !== 'si'} onPress={() => router.replace('/encuesta')} />
+              <Button variant="text" title="Continuar sin evaluar" disabled={guardado !== 'si'} onPress={() => router.back()} />
+            </>
           )}
         </View>
       </ScrollView>

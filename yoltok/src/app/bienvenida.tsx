@@ -52,8 +52,8 @@ export default function Bienvenida() {
             <Text style={styles.heroTitle}>{registro ? 'Crea tu cuenta' : '¡Panolti!'}</Text>
             <Text style={styles.heroText}>
               {registro
-                ? 'Guarda tu progreso mientras aprendes náhuat del sur de Veracruz.'
-                : 'Inicia sesión para seguir aprendiendo náhuat.'}
+                ? 'Guarda tu progreso mientras aprendes náhuatl del sur de Veracruz.'
+                : 'Inicia sesión para seguir aprendiendo náhuatl.'}
             </Text>
           </View>
 
