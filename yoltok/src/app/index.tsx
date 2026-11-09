@@ -1,6 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons'
-import { router } from 'expo-router'
-import { useEffect, useState, type ComponentProps } from 'react'
+import { router, useFocusEffect } from 'expo-router'
+import { useCallback, useState, type ComponentProps } from 'react'
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
@@ -31,11 +31,12 @@ export default function Categorias() {
   const [tarjetas, setTarjetas] = useState<Tarjeta[] | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
+    if (!session) return // al cerrar sesión la pantalla aún se pinta una vez sin sesión
     Promise.all([
       supabase.from('categorias').select('id, nombre, descripcion').order('orden'),
       supabase.from('lecciones').select('id, categoria_id'),
-      supabase.from('progreso_usuarios').select('leccion_id').eq('usuario_id', session!.user.id).eq('completada', true),
+      supabase.from('progreso_usuarios').select('leccion_id').eq('usuario_id', session.user.id).eq('completada', true),
     ]).then(([c, l, pr]) => {
       const fallo = c.error ?? l.error ?? pr.error
       if (fallo) return setError(fallo.message)
@@ -48,7 +49,7 @@ export default function Categorias() {
         }),
       )
     })
-  }, [session])
+  }, [session]))
 
   function abrir(t: Tarjeta) {
     if (!t.total) return Alert.alert('Próximamente', `Las lecciones de «${t.nombre}» todavía se están preparando.`)

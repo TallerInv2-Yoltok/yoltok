@@ -1,6 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons'
-import { useLocalSearchParams } from 'expo-router'
-import { useEffect, useState } from 'react'
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router'
+import { useCallback, useState } from 'react'
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
@@ -26,8 +26,10 @@ export default function Ruta() {
   const [palabra, setPalabra] = useState<Palabra | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    const userId = session!.user.id
+  // Al volver de una lección se recarga para mostrar el avance.
+  useFocusEffect(useCallback(() => {
+    if (!session) return // al cerrar sesión la pantalla aún se pinta una vez sin sesión
+    const userId = session.user.id
     Promise.all([
       supabase.from('categorias').select('nombre, descripcion').eq('id', categoriaId).maybeSingle(),
       supabase.from('lecciones').select('id, titulo, nivel, orden, activa').eq('categoria_id', categoriaId).order('orden'),
@@ -42,7 +44,7 @@ export default function Ruta() {
       // Una palabra distinta cada día.
       if (lista.length) setPalabra(lista[Math.floor(Date.now() / 86_400_000) % lista.length])
     })
-  }, [session, categoriaId])
+  }, [session, categoriaId]))
 
   const activas = nodos?.filter((n) => n.estado !== 'proximamente') ?? []
   const hechas = activas.filter((n) => n.estado === 'completada').length
@@ -54,7 +56,7 @@ export default function Ruta() {
     } else if (n.estado === 'proximamente') {
       Alert.alert('Próximamente', 'Esta lección todavía se está preparando.')
     } else {
-      Alert.alert(n.titulo, 'Los ejercicios llegan en el siguiente paso.') // shortcut: abrir /leccion/[id] cuando exista
+      router.push({ pathname: '/leccion/[id]', params: { id: n.id } })
     }
   }
 

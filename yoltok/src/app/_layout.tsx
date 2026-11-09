@@ -33,6 +33,7 @@ function Rutas() {
       <Stack.Protected guard={!!session}>
         <Stack.Screen name="index" />
         <Stack.Screen name="ruta/[categoria]" />
+        <Stack.Screen name="leccion/[id]" options={{ gestureEnabled: false }} />
       </Stack.Protected>
       <Stack.Protected guard={!session}>
         <Stack.Screen name="bienvenida" />

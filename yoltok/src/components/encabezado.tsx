@@ -1,6 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons'
-import { router } from 'expo-router'
-import { useEffect, useState } from 'react'
+import { router, useFocusEffect } from 'expo-router'
+import { useCallback, useState } from 'react'
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native'
 
 import { useAuth } from '@/lib/auth'
@@ -14,14 +14,15 @@ export function Encabezado({ atras }: { atras?: boolean }) {
   const { session } = useAuth()
   const [perfil, setPerfil] = useState<Perfil | null>(null)
 
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
+    if (!session) return // al cerrar sesión la pantalla aún se pinta una vez sin sesión
     supabase
       .from('usuarios')
       .select('nombre, puntos, vidas')
-      .eq('id', session!.user.id)
+      .eq('id', session.user.id)
       .maybeSingle()
       .then(({ data }) => setPerfil(data))
-  }, [session])
+  }, [session]))
 
   function menuPerfil() {
     Alert.alert(perfil?.nombre || 'Tu cuenta', session?.user.email, [
