@@ -11,16 +11,16 @@ import { supabase } from '@/lib/supabase'
 import { colors, fonts } from '@/theme'
 
 // Reactivos del cuestionario final (protocolo: 3 bloques ISO 9241-11). La clave es la columna en Supabase.
-type Likert = { clave: 'navegacion' | 'diseno' | 'instrucciones' | 'motivacion' | 'utilidad'; texto: string; ayuda: string }
+type Likert = { clave: 'navegacion' | 'diseno' | 'instrucciones' | 'motivacion' | 'utilidad'; texto: string }
 
 const BLOQUE_EFICIENCIA: Likert[] = [
-  { clave: 'navegacion', texto: 'Fue fácil navegar y usar la aplicación.', ayuda: 'Eficiencia y fluidez de navegación' },
-  { clave: 'diseno', texto: 'El diseño visual y los botones son claros e intuitivos.', ayuda: 'Claridad visual de la interfaz' },
-  { clave: 'instrucciones', texto: 'Las instrucciones de los ejercicios se entendieron bien.', ayuda: 'Claridad de las instrucciones' },
+  { clave: 'navegacion', texto: 'Fue fácil navegar y usar la aplicación.' },
+  { clave: 'diseno', texto: 'El diseño visual y los botones son claros e intuitivos.' },
+  { clave: 'instrucciones', texto: 'Las instrucciones de los ejercicios se entendieron bien.' },
 ]
 const BLOQUE_SATISFACCION: Likert[] = [
-  { clave: 'motivacion', texto: 'Los puntos, vidas y retos me motivaron a seguir aprendiendo.', ayuda: 'Motivación por la gamificación' },
-  { clave: 'utilidad', texto: 'La aplicación me sirve para estudiar y preservar el náhuatl.', ayuda: 'Utilidad pedagógica percibida' },
+  { clave: 'motivacion', texto: 'Los puntos, vidas y retos me motivaron a seguir aprendiendo.' },
+  { clave: 'utilidad', texto: 'La aplicación me sirve para estudiar y preservar el náhuatl.' },
 ]
 // Reactivos de retención léxica inmediata: palabras de la lección 1.
 const LEXICOS = [
@@ -175,7 +175,6 @@ function Escala({ n, p, valor, onChange }: { n: number; p: Likert; valor?: numbe
   return (
     <View style={styles.tarjeta}>
       <Text style={styles.pregunta}><Text style={styles.numero}>{n}. </Text>{p.texto}</Text>
-      <Text style={styles.ayuda}>{p.ayuda}</Text>
       <View style={styles.extremos}>
         <Text style={styles.extremo}>Muy en desacuerdo</Text>
         <Text style={styles.extremo}>Muy de acuerdo</Text>
