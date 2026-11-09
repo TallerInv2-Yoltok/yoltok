@@ -82,7 +82,7 @@ export default function Encuesta() {
         <Text style={styles.titulo}>¡Tasohkamati!</Text>
         <Text style={styles.texto}>Gracias por evaluar Yoltok. Tus respuestas ayudan a preservar el náhuatl del sur de Veracruz.</Text>
         <View style={{ alignSelf: 'stretch', marginTop: 24 }}>
-          <Button title="Volver al inicio" onPress={() => router.dismissTo('/')} />
+          <Button title="Volver al inicio" onPress={() => router.dismissAll()} />
         </View>
       </SafeAreaView>
     )

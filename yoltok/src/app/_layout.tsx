@@ -31,7 +31,7 @@ function Rutas() {
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Protected guard={!!session}>
-        <Stack.Screen name="index" />
+        <Stack.Screen name="(tabs)" />
         <Stack.Screen name="ruta/[categoria]" />
         <Stack.Screen name="leccion/[id]" options={{ gestureEnabled: false }} />
         <Stack.Screen name="encuesta" />
