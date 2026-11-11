@@ -35,6 +35,7 @@ function Rutas() {
         <Stack.Screen name="ruta/[categoria]" />
         <Stack.Screen name="leccion/[id]" options={{ gestureEnabled: false }} />
         <Stack.Screen name="encuesta" />
+        <Stack.Screen name="guia/[id]" options={{ presentation: 'modal' }} />
       </Stack.Protected>
       <Stack.Protected guard={!session}>
         <Stack.Screen name="bienvenida" />

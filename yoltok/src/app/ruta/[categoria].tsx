@@ -79,6 +79,16 @@ export default function Ruta() {
                 <View style={[styles.barraLlena, { width: `${activas.length ? (hechas / activas.length) * 100 : 0}%` }]} />
               </View>
             </View>
+            {(actual ?? activas[0]) && (
+              <Pressable
+                onPress={() => router.push({ pathname: '/guia/[id]', params: { id: (actual ?? activas[0]).id } })}
+                accessibilityRole="button"
+                style={styles.guia}
+              >
+                <MaterialCommunityIcons name="book-open-page-variant-outline" size={18} color={colors.primaryDark} />
+                <Text style={styles.guiaTexto}>Ver guía de la lección</Text>
+              </Pressable>
+            )}
           </View>
 
           <View style={styles.camino}>
@@ -156,6 +166,11 @@ const styles = StyleSheet.create({
   etapaTitulo: { fontFamily: fonts.heading, fontSize: 22, lineHeight: 28, color: '#FFFFFF', marginTop: 10 },
   etapaTexto: { fontFamily: fonts.body, fontSize: 13, lineHeight: 18, color: '#ECFDF5', marginTop: 4 },
   etapaPie: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 14 },
+  guia: {
+    flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', marginTop: 14,
+    backgroundColor: '#FFFFFF', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 9999,
+  },
+  guiaTexto: { fontFamily: fonts.heading, fontSize: 13, color: colors.primaryDark },
   etapaProgreso: { flex: 1, fontFamily: fonts.title, fontSize: 13, color: '#FFFFFF' },
   barra: { width: 90, height: 10, borderRadius: 9999, backgroundColor: 'rgba(255,255,255,0.3)', overflow: 'hidden' },
   barraLlena: { height: '100%', backgroundColor: '#FFFFFF', borderRadius: 9999 },
