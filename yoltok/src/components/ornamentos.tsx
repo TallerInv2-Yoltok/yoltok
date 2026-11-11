@@ -63,16 +63,18 @@ export function GlifoFlor({ tamano = 26 }: { tamano?: number }) {
 }
 
 // Arcos concéntricos tenues detrás del contenido.
+// La transparencia va en cada trazo (strokeOpacity): la opacidad del contenedor casi no se veía en Android.
 export function Arcos({ estilo }: { estilo: object }) {
+  const trazo = { fill: 'none', stroke: colors.primaryDark, strokeOpacity: 0.09 }
   return (
     <Svg width={320} height={320} viewBox="0 0 320 320" style={[styles.arcos, estilo]} accessible={false} pointerEvents="none">
-      <Circle cx={160} cy={160} r={150} fill="none" stroke={colors.primaryDark} strokeWidth={6} />
-      <Circle cx={160} cy={160} r={118} fill="none" stroke={colors.primaryDark} strokeWidth={18} />
-      <Circle cx={160} cy={160} r={70} fill="none" stroke={colors.primaryDark} strokeWidth={6} />
+      <Circle cx={160} cy={160} r={150} strokeWidth={6} {...trazo} />
+      <Circle cx={160} cy={160} r={118} strokeWidth={18} {...trazo} />
+      <Circle cx={160} cy={160} r={70} strokeWidth={6} {...trazo} />
     </Svg>
   )
 }
 
 const styles = StyleSheet.create({
-  arcos: { position: 'absolute', opacity: 0.07 },
+  arcos: { position: 'absolute' },
 })

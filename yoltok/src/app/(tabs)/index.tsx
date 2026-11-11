@@ -54,6 +54,8 @@ export default function Categorias() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
+      {/* Detrás de todo y fuera del ScrollView, para que no lo recorte (abajo a la derecha, como en el diseño). */}
+      <Arcos estilo={{ right: -170, bottom: 40 }} />
       <Encabezado />
       {error ? (
         <View style={styles.centro}><Text style={styles.error}>Error: {error}</Text></View>
@@ -61,7 +63,6 @@ export default function Categorias() {
         <View style={styles.centro}><ActivityIndicator color={colors.primary} /></View>
       ) : (
         <ScrollView contentContainerStyle={styles.contenido}>
-          <Arcos estilo={{ right: -170, bottom: -60 }} />
           <View style={{ gap: 6 }}>
             <Text style={styles.titulo}>¿Qué quieres aprender?</Text>
             <Text style={styles.subtitulo}>Elige una categoría para empezar tu ruta en náhuatl.</Text>
@@ -103,7 +104,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.surface },
   centro: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 16 },
   error: { fontFamily: fonts.body, color: colors.errorLip },
-  contenido: { paddingHorizontal: 18, paddingTop: 24, paddingBottom: 32, gap: 18, maxWidth: 480, width: '100%', alignSelf: 'center', overflow: 'hidden' },
+  contenido: { paddingHorizontal: 18, paddingTop: 24, paddingBottom: 32, gap: 18, maxWidth: 480, width: '100%', alignSelf: 'center' },
   titulo: { fontFamily: fonts.heading, fontSize: 26, lineHeight: 30, letterSpacing: -0.6, color: colors.text },
   subtitulo: { fontFamily: fonts.body, fontSize: 14, lineHeight: 21, color: colors.textMuted },
   rejilla: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
