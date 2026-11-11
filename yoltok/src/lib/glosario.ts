@@ -1,4 +1,4 @@
-export type Palabra = { id: string; palabra_nahuat: string; traduccion_espanol: string; categoria_id: string | null }
+export type Palabra = { id: string; palabra_nahuat: string; traduccion_espanol: string; categoria_id: string | null; audio_path?: string | null }
 
 // Sin acentos ni mayúsculas, para que «nahuatl» encuentre «Náhuatl».
 const normalizar = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim()

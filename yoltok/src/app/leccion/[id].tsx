@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
+import { BotonAudio } from '@/components/audio'
 import { Button } from '@/components/ui'
 import { useAuth } from '@/lib/auth'
 import { contenido, mezclar, nuevaSesion, responder, type Ejercicio, type Par, type Sesion } from '@/lib/quiz'
@@ -36,7 +37,7 @@ export default function Leccion() {
     Promise.all([
       supabase
         .from('ejercicios')
-        .select('id, tipo, instruccion, opciones, respuesta_correcta, puntos, orden, palabra:palabras(palabra_nahuat, traduccion_espanol)')
+        .select('id, tipo, instruccion, opciones, respuesta_correcta, puntos, orden, palabra:palabras(palabra_nahuat, traduccion_espanol, audio_path)')
         .eq('leccion_id', id)
         .order('orden'),
       supabase.from('usuarios').select('vidas, puntos').eq('id', userId).single(),
@@ -168,6 +169,13 @@ export default function Leccion() {
           <Text style={styles.chipXp}>+{actual.puntos} XP</Text>
         </View>
         <Text style={styles.pregunta}>{actual.instruccion}</Text>
+        {/* Solo si la pregunta muestra la palabra en náhuatl; si la palabra es la respuesta, el audio la delataría. */}
+        {actual.palabra?.audio_path && actual.instruccion.includes(actual.palabra.palabra_nahuat) && (
+          <View style={styles.audio}>
+            <BotonAudio audioPath={actual.palabra.audio_path} etiqueta={actual.palabra.palabra_nahuat} tamano={64} />
+            <Text style={styles.audioTexto}>Toca para escuchar</Text>
+          </View>
+        )}
         {/* key: cada intento (incluido el repaso) empieza sin selección */}
         {c.clase === 'opciones' ? (
           <Opciones key={`${actual.id}-${sesion.intentos}`} opciones={c.opciones} correcta={c.correcta} bloqueado={!!resultado} onEvaluar={evaluar} />
@@ -413,6 +421,8 @@ const styles = StyleSheet.create({
   },
   pregunta: { fontFamily: fonts.heading, fontSize: 22, lineHeight: 28, color: colors.text, marginVertical: 20 },
   rejilla: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  audio: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: -8, marginBottom: 20 },
+  audioTexto: { fontFamily: fonts.title, fontSize: 15, color: colors.secondaryLip },
   opcion: {
     width: '47%', flexGrow: 1, minHeight: 96, justifyContent: 'center', padding: 16,
     backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 2, borderColor: colors.outline, borderBottomWidth: 4,

@@ -4,6 +4,7 @@ import { useCallback, useState } from 'react'
 import { ActivityIndicator, FlatList, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
+import { BotonAudio } from '@/components/audio'
 import { Encabezado } from '@/components/encabezado'
 import { useAuth } from '@/lib/auth'
 import { filtrarPalabras, type Palabra } from '@/lib/glosario'
@@ -13,7 +14,6 @@ import { colors, fonts } from '@/theme'
 type Categoria = { id: string; nombre: string }
 
 // Glosario «Tlahtolli» (diseño "glosario_de_audios_palabras_yoltok").
-// shortcut: sin botón de audio porque ninguna palabra tiene audio_path; agregar expo-audio cuando existan.
 export default function Glosario() {
   const { session } = useAuth()
   const [palabras, setPalabras] = useState<Palabra[] | null>(null)
@@ -26,7 +26,7 @@ export default function Glosario() {
   useFocusEffect(useCallback(() => {
     if (!session) return
     Promise.all([
-      supabase.from('palabras').select('id, palabra_nahuat, traduccion_espanol, categoria_id').neq('palabra_nahuat', '').order('palabra_nahuat'),
+      supabase.from('palabras').select('id, palabra_nahuat, traduccion_espanol, categoria_id, audio_path').neq('palabra_nahuat', '').order('palabra_nahuat'),
       supabase.from('categorias').select('id, nombre').order('orden'),
       supabase.from('progreso_usuarios').select('leccion_id').eq('usuario_id', session.user.id).eq('completada', true),
       supabase.from('ejercicios').select('palabra_id, leccion_id'),
@@ -97,14 +97,17 @@ export default function Glosario() {
           ListEmptyComponent={<Text style={styles.vacio}>No encontramos «{texto}». Prueba con otra palabra.</Text>}
           renderItem={({ item }) => (
             <View style={styles.tarjeta}>
-              <Text style={styles.nahuatl}>{item.palabra_nahuat}</Text>
-              <Text style={styles.espanol}>{item.traduccion_espanol}</Text>
-              {dominadas.has(item.id) && (
-                <View style={styles.dominada}>
-                  <MaterialCommunityIcons name="check-circle-outline" size={14} color={colors.primaryDark} />
-                  <Text style={styles.dominadaTexto}>Dominada</Text>
-                </View>
-              )}
+              <View style={{ flex: 1, gap: 4 }}>
+                <Text style={styles.nahuatl}>{item.palabra_nahuat}</Text>
+                <Text style={styles.espanol}>{item.traduccion_espanol}</Text>
+                {dominadas.has(item.id) && (
+                  <View style={styles.dominada}>
+                    <MaterialCommunityIcons name="check-circle-outline" size={14} color={colors.primaryDark} />
+                    <Text style={styles.dominadaTexto}>Dominada</Text>
+                  </View>
+                )}
+              </View>
+              {item.audio_path && <BotonAudio audioPath={item.audio_path} etiqueta={item.palabra_nahuat} />}
             </View>
           )}
           ListFooterComponent={
@@ -148,7 +151,7 @@ const styles = StyleSheet.create({
   vacio: { fontFamily: fonts.body, fontSize: 15, color: colors.textMuted, textAlign: 'center', marginTop: 24 },
   tarjeta: {
     backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 2, borderColor: colors.outline,
-    borderBottomWidth: 4, padding: 16, gap: 4,
+    borderBottomWidth: 4, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12,
   },
   nahuatl: { fontFamily: fonts.bodyBold, fontSize: 20, color: colors.text },
   espanol: { fontFamily: fonts.body, fontSize: 15, color: colors.textMuted },

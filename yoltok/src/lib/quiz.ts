@@ -6,7 +6,7 @@ export type Ejercicio = {
   respuesta_correcta: string | null
   puntos: number
   orden: number
-  palabra: { palabra_nahuat: string; traduccion_espanol: string } | null
+  palabra: { palabra_nahuat: string; traduccion_espanol: string; audio_path?: string | null } | null
 }
 
 export type Par = { nahuat: string; espanol: string }
@@ -15,7 +15,6 @@ export type Contenido =
   | { clase: 'pares'; pares: Par[] }
 
 // opcion_multiple y comprension_auditiva comparten forma: lista de opciones + respuesta.
-// shortcut: comprension_auditiva se muestra como texto porque ninguna palabra tiene audio_path; usar expo-audio cuando lo tengan.
 export function contenido(e: Ejercicio): Contenido {
   if (e.tipo === 'emparejar_pares') return { clase: 'pares', pares: (e.opciones as { pares: Par[] }).pares }
   return { clase: 'opciones', opciones: e.opciones as string[], correcta: e.respuesta_correcta ?? '' }
