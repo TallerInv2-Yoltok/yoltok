@@ -6,7 +6,7 @@ export type Ejercicio = {
   respuesta_correcta: string | null
   puntos: number
   orden: number
-  palabra: { palabra_nahuat: string; traduccion_espanol: string; audio_path?: string | null } | null
+  palabra: { palabra_nahuat: string; traduccion_espanol: string; audio_path?: string | null; descripcion?: string | null } | null
 }
 
 export type Par = { nahuat: string; espanol: string }
