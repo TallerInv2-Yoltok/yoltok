@@ -5,6 +5,8 @@ import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View
 import { SafeAreaView } from 'react-native-safe-area-context'
 
 import { Encabezado } from '@/components/encabezado'
+import { Arcos } from '@/components/ornamentos'
+import { PalabraDelDia } from '@/components/palabra-del-dia'
 import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
 import { colors, fonts } from '@/theme'
@@ -13,19 +15,13 @@ type Icono = ComponentProps<typeof MaterialCommunityIcons>['name']
 type Tarjeta = { id: string; nombre: string; descripcion: string | null; total: number; hechas: number }
 
 const ICONOS: Record<string, Icono> = {
-  Expresiones: 'chat-processing',
-  Animales: 'paw',
+  Expresiones: 'chat-processing-outline',
+  Animales: 'paw-outline',
   Alimentos: 'corn',
-  Hogar: 'home-variant',
+  Hogar: 'home-outline',
 }
 
-const TONOS = [
-  { fondo: colors.primaryTint, icono: colors.primaryDark },
-  { fondo: colors.secondaryTint, icono: colors.secondaryLip },
-  { fondo: colors.tertiaryTint, icono: colors.tertiaryLip },
-]
-
-// Pantalla de inicio: el usuario elige primero la categoría (retroalimentación del taller).
+// Pantalla de inicio «Aprender» (diseño «Yoltok Login»): el usuario elige primero la categoría.
 export default function Categorias() {
   const { session } = useAuth()
   const [tarjetas, setTarjetas] = useState<Tarjeta[] | null>(null)
@@ -65,11 +61,13 @@ export default function Categorias() {
         <View style={styles.centro}><ActivityIndicator color={colors.primary} /></View>
       ) : (
         <ScrollView contentContainerStyle={styles.contenido}>
-          <Text style={styles.titulo}>¿Qué quieres aprender?</Text>
-          <Text style={styles.subtitulo}>Elige una categoría para empezar tu ruta en náhuatl.</Text>
+          <Arcos estilo={{ right: -170, bottom: -60 }} />
+          <View style={{ gap: 6 }}>
+            <Text style={styles.titulo}>¿Qué quieres aprender?</Text>
+            <Text style={styles.subtitulo}>Elige una categoría para empezar tu ruta en náhuatl.</Text>
+          </View>
           <View style={styles.rejilla}>
-            {tarjetas.map((t, i) => {
-              const tono = TONOS[i % TONOS.length]
+            {tarjetas.map((t) => {
               const pronto = !t.total
               return (
                 <Pressable
@@ -77,20 +75,16 @@ export default function Categorias() {
                   onPress={() => abrir(t)}
                   accessibilityRole="button"
                   accessibilityLabel={`${t.nombre}. ${pronto ? 'Próximamente' : `${t.hechas} de ${t.total} lecciones`}`}
-                  style={({ pressed }) => [styles.tarjeta, pronto && styles.tarjetaPronto, pressed && !pronto && styles.presionada]}
+                  style={({ pressed }) => [styles.tarjeta, pronto ? styles.tarjetaPronto : styles.tarjetaActiva, pressed && !pronto && { opacity: 0.85 }]}
                 >
-                  <View style={[styles.iconoCaja, { backgroundColor: pronto ? colors.outline : tono.fondo }]}>
-                    <MaterialCommunityIcons
-                      name={ICONOS[t.nombre] ?? 'book-open-variant'}
-                      size={30}
-                      color={pronto ? colors.disabledText : tono.icono}
-                    />
+                  <View style={[styles.iconoCaja, { backgroundColor: pronto ? colors.mutedTint : colors.primaryTint }]}>
+                    <MaterialCommunityIcons name={ICONOS[t.nombre] ?? 'book-open-outline'} size={24} color={pronto ? colors.icon : colors.primary} />
                   </View>
-                  <Text style={styles.nombre}>{t.nombre}</Text>
-                  {t.descripcion && <Text style={styles.descripcion} numberOfLines={3}>{t.descripcion}</Text>}
-                  <View style={[styles.estado, pronto ? styles.estadoPronto : styles.estadoActivo]}>
-                    {pronto && <MaterialCommunityIcons name="lock" size={12} color={colors.textMuted} />}
-                    <Text style={[styles.estadoTexto, { color: pronto ? colors.textMuted : colors.primaryDark }]}>
+                  <Text style={[styles.nombre, pronto && { color: '#3A3E3C' }]}>{t.nombre}</Text>
+                  {t.descripcion && <Text style={styles.descripcion} numberOfLines={4}>{t.descripcion}</Text>}
+                  <View style={[styles.estado, { backgroundColor: pronto ? colors.mutedTint : colors.primaryTint }]}>
+                    <MaterialCommunityIcons name={pronto ? 'lock-outline' : 'check'} size={13} color={pronto ? colors.textMuted : colors.primaryText} />
+                    <Text style={[styles.estadoTexto, { color: pronto ? colors.textMuted : colors.primaryText }]}>
                       {pronto ? 'Próximamente' : `${t.hechas} de ${t.total} lecciones`}
                     </Text>
                   </View>
@@ -98,6 +92,7 @@ export default function Categorias() {
               )
             })}
           </View>
+          <PalabraDelDia tarjeta />
         </ScrollView>
       )}
     </SafeAreaView>
@@ -108,29 +103,19 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.surface },
   centro: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 16 },
   error: { fontFamily: fonts.body, color: colors.errorLip },
-  contenido: { padding: 16, paddingBottom: 40, maxWidth: 480, width: '100%', alignSelf: 'center' },
-  titulo: { fontFamily: fonts.heading, fontSize: 28, lineHeight: 34, color: colors.text },
-  subtitulo: { fontFamily: fonts.body, fontSize: 15, lineHeight: 22, color: colors.textMuted, marginTop: 4, marginBottom: 20 },
+  contenido: { paddingHorizontal: 18, paddingTop: 24, paddingBottom: 32, gap: 18, maxWidth: 480, width: '100%', alignSelf: 'center', overflow: 'hidden' },
+  titulo: { fontFamily: fonts.heading, fontSize: 26, lineHeight: 30, letterSpacing: -0.6, color: colors.text },
+  subtitulo: { fontFamily: fonts.body, fontSize: 14, lineHeight: 21, color: colors.textMuted },
   rejilla: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  tarjeta: {
-    width: '48%',
-    flexGrow: 1,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: colors.outline,
-    borderBottomWidth: 5,
-    borderBottomColor: colors.outlineLip,
-    padding: 14,
-    gap: 8,
+  tarjeta: { width: '47%', flexGrow: 1, borderRadius: 16, paddingVertical: 16, paddingHorizontal: 14, gap: 10 },
+  tarjetaActiva: {
+    backgroundColor: colors.card, borderWidth: 1.5, borderColor: colors.primary,
+    shadowColor: colors.primaryDark, shadowOpacity: 0.1, shadowRadius: 11, shadowOffset: { width: 0, height: 8 }, elevation: 3,
   },
-  tarjetaPronto: { backgroundColor: colors.surface },
-  presionada: { transform: [{ translateY: 3 }], borderBottomWidth: 2 },
-  iconoCaja: { width: 52, height: 52, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  nombre: { fontFamily: fonts.heading, fontSize: 18, color: colors.text },
-  descripcion: { fontFamily: fonts.body, fontSize: 13, lineHeight: 18, color: colors.textMuted, flexGrow: 1 },
-  estado: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 9999 },
-  estadoActivo: { backgroundColor: colors.primaryTint },
-  estadoPronto: { backgroundColor: colors.outline },
-  estadoTexto: { fontFamily: fonts.heading, fontSize: 11, letterSpacing: 0.3 },
+  tarjetaPronto: { backgroundColor: colors.cardMuted, borderWidth: 1, borderColor: colors.outline },
+  iconoCaja: { width: 46, height: 46, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  nombre: { fontFamily: fonts.heading, fontSize: 17, color: colors.text },
+  descripcion: { fontFamily: fonts.body, fontSize: 12.5, lineHeight: 18, color: colors.textMuted, flexGrow: 1 },
+  estado: { flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start', height: 26, paddingHorizontal: 10, borderRadius: 9999 },
+  estadoTexto: { fontFamily: fonts.title, fontSize: 11.5 },
 })

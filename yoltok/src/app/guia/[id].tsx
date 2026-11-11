@@ -126,6 +126,6 @@ const styles = StyleSheet.create({
   },
   nahuatl: { fontFamily: fonts.heading, fontSize: 20, color: colors.text },
   espanol: { fontFamily: fonts.body, fontSize: 15, color: colors.textMuted },
-  variantes: { backgroundColor: '#EEF2FF', borderColor: '#EEF2FF' },
+  variantes: { backgroundColor: colors.mutedTint, borderColor: colors.mutedTint },
   variantesTitulo: { fontFamily: fonts.heading, fontSize: 16, color: colors.secondaryLip },
 })

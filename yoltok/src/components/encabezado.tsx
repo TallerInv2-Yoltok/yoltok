@@ -3,6 +3,7 @@ import { router, useFocusEffect } from 'expo-router'
 import { useCallback, useState } from 'react'
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native'
 
+import { Emblema, GrecaArriba } from '@/components/ornamentos'
 import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
 import { colors, fonts } from '@/theme'
@@ -32,20 +33,26 @@ export function Encabezado({ atras }: { atras?: boolean }) {
   }
 
   return (
-    <View style={styles.header}>
-      {atras ? (
-        <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Volver" hitSlop={10}>
-          <MaterialCommunityIcons name="arrow-left" size={26} color={colors.text} />
-        </Pressable>
-      ) : (
-        <Text style={styles.brand}>Yoltok</Text>
-      )}
-      <View style={styles.derecha}>
-        <Chip icono="heart" color={colors.error} texto={String(perfil?.vidas ?? 0)} label="vidas" />
-        <Chip icono="star" color={colors.tertiary} texto={`${perfil?.puntos ?? 0} XP`} label="puntos" />
-        <Pressable onPress={menuPerfil} style={styles.avatar} accessibilityRole="button" accessibilityLabel="Mi cuenta">
-          <MaterialCommunityIcons name="account" size={22} color="#FFFFFF" />
-        </Pressable>
+    <View>
+      <GrecaArriba />
+      <View style={styles.header}>
+        {atras ? (
+          <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Volver" hitSlop={10}>
+            <MaterialCommunityIcons name="arrow-left" size={26} color={colors.text} />
+          </Pressable>
+        ) : (
+          <View style={styles.marca}>
+            <Emblema tamano={30} />
+            <Text style={styles.brand}>Yoltok</Text>
+          </View>
+        )}
+        <View style={styles.derecha}>
+          <Chip icono="heart" color={colors.error} texto={String(perfil?.vidas ?? 0)} label="vidas" />
+          <Chip icono="star" color={colors.tertiary} texto={`${perfil?.puntos ?? 0} XP`} label="puntos" />
+          <Pressable onPress={menuPerfil} style={styles.avatar} accessibilityRole="button" accessibilityLabel="Mi cuenta">
+            <MaterialCommunityIcons name="account-outline" size={22} color="#FFFFFF" />
+          </Pressable>
+        </View>
       </View>
     </View>
   )
@@ -65,25 +72,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 2,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    backgroundColor: colors.card,
+    borderBottomWidth: 1,
     borderBottomColor: colors.outline,
   },
-  brand: { fontFamily: fonts.heading, fontSize: 22, color: colors.primaryDark },
+  marca: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  brand: { fontFamily: fonts.heading, fontSize: 20, letterSpacing: -0.5, color: colors.primaryDark },
   derecha: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    gap: 5,
+    height: 34,
+    paddingHorizontal: 11,
     borderRadius: 9999,
-    backgroundColor: '#FFFBEB',
-    borderWidth: 1.5,
-    borderColor: '#FDE68A',
+    backgroundColor: colors.input,
+    borderWidth: 1,
+    borderColor: colors.outline,
   },
-  chipTexto: { fontFamily: fonts.heading, fontSize: 13, color: colors.text },
-  avatar: { width: 38, height: 38, borderRadius: 19, backgroundColor: colors.primaryDark, alignItems: 'center', justifyContent: 'center' },
+  chipTexto: { fontFamily: fonts.title, fontSize: 14, color: colors.text },
+  avatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.primaryDark, alignItems: 'center', justifyContent: 'center' },
 })

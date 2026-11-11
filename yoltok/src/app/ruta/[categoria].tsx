@@ -190,8 +190,8 @@ const styles = StyleSheet.create({
   },
   circulo: { width: 76, height: 76, borderRadius: 38, alignItems: 'center', justifyContent: 'center', borderBottomWidth: 6 },
   circuloActual: { width: 96, height: 96, borderRadius: 48 },
-  circuloVerde: { backgroundColor: colors.primaryDark, borderBottomColor: '#004D33' },
-  circuloGris: { backgroundColor: '#E2E8F0', borderBottomColor: colors.outlineLip },
+  circuloVerde: { backgroundColor: colors.primaryDark, borderBottomColor: colors.text },
+  circuloGris: { backgroundColor: colors.mutedTint, borderBottomColor: colors.outlineLip },
   nivel: { fontFamily: fonts.heading, fontSize: 11, color: '#FFFFFF', marginTop: -2 },
   nodoLabel: {
     fontFamily: fonts.title,

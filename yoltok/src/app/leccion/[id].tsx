@@ -308,7 +308,7 @@ function Opciones({ opciones, correcta, bloqueado, onEvaluar }: {
               accessibilityState={{ selected: sel }}
               style={[styles.opcion, sel && styles.opcionSel, bien && styles.opcionBien, mal && styles.opcionMal]}
             >
-              <Text style={[styles.opcionTexto, sel && { color: '#0369A1' }, bien && { color: colors.primaryDark }, mal && { color: colors.errorLip }]}>
+              <Text style={[styles.opcionTexto, sel && { color: colors.secondaryLip }, bien && { color: colors.primaryDark }, mal && { color: colors.errorLip }]}>
                 {op}
               </Text>
             </Pressable>
@@ -509,15 +509,15 @@ const styles = StyleSheet.create({
   },
   estudio: {
     alignSelf: 'stretch', alignItems: 'center', gap: 10, backgroundColor: '#FFFFFF', borderRadius: 24, padding: 24,
-    borderWidth: 2, borderColor: colors.outline, borderBottomWidth: 6, borderBottomColor: '#C7D2FE',
+    borderWidth: 2, borderColor: colors.outline, borderBottomWidth: 6, borderBottomColor: colors.outlineLip,
   },
   navTarjetas: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 4 },
   escuchar: { fontFamily: fonts.heading, fontSize: 13, letterSpacing: 0.5, color: colors.secondaryLip },
   estudioPalabra: { fontFamily: fonts.heading, fontSize: 40, lineHeight: 48, color: colors.text, textAlign: 'center', marginTop: 8 },
   estudioTraduccion: { fontFamily: fonts.body, fontSize: 22, color: colors.textMuted, textAlign: 'center' },
-  estudioNota: { flexDirection: 'row', gap: 10, alignSelf: 'stretch', backgroundColor: '#EEF2FF', borderRadius: 16, padding: 14, marginTop: 8 },
+  estudioNota: { flexDirection: 'row', gap: 10, alignSelf: 'stretch', backgroundColor: colors.mutedTint, borderRadius: 16, padding: 14, marginTop: 8 },
   estudioNotaTexto: { flex: 1, fontFamily: fonts.body, fontSize: 14, lineHeight: 20, color: colors.text },
-  velo: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.4)' },
+  velo: { flex: 1, backgroundColor: 'rgba(22, 64, 58, 0.35)' },
   salida: {
     backgroundColor: '#FFFFFF', borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, paddingBottom: 40,
     alignItems: 'center', gap: 10,
@@ -532,9 +532,9 @@ const styles = StyleSheet.create({
     width: '47%', flexGrow: 1, minHeight: 96, justifyContent: 'center', padding: 16,
     backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 2, borderColor: colors.outline, borderBottomWidth: 4,
   },
-  opcionSel: { backgroundColor: '#F0F9FF', borderColor: colors.secondary, borderBottomColor: colors.secondaryLip },
-  opcionBien: { backgroundColor: '#ECFDF5', borderColor: colors.primary, borderBottomColor: colors.primaryLip },
-  opcionMal: { backgroundColor: '#FEF2F2', borderColor: colors.error, borderBottomColor: colors.errorLip },
+  opcionSel: { backgroundColor: colors.secondaryTint, borderColor: colors.secondary, borderBottomColor: colors.secondaryLip },
+  opcionBien: { backgroundColor: colors.primaryTint, borderColor: colors.primary, borderBottomColor: colors.primaryLip },
+  opcionMal: { backgroundColor: colors.errorTint, borderColor: colors.error, borderBottomColor: colors.errorLip },
   opcionTexto: { fontFamily: fonts.bodyBold, fontSize: 16, lineHeight: 22, color: colors.text, textAlign: 'center' },
   pares: { flexDirection: 'row', gap: 12 },
   columna: { flex: 1, gap: 12 },
@@ -542,12 +542,12 @@ const styles = StyleSheet.create({
     minHeight: 64, justifyContent: 'center', padding: 12,
     backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 2, borderColor: colors.outline, borderBottomWidth: 4,
   },
-  fichaHecha: { backgroundColor: '#ECFDF5', borderColor: colors.primary, borderBottomColor: colors.primaryLip },
+  fichaHecha: { backgroundColor: colors.primaryTint, borderColor: colors.primary, borderBottomColor: colors.primaryLip },
   fichaTexto: { fontFamily: fonts.body, fontSize: 15, color: colors.text, textAlign: 'center' },
   fichaNahuat: { fontFamily: fonts.bodyBold },
   hoja: { position: 'absolute', left: 0, right: 0, bottom: 0, padding: 16, paddingBottom: 32, gap: 16, borderTopWidth: 2 },
-  hojaBien: { backgroundColor: '#ECFDF5', borderTopColor: '#A7F3D0' },
-  hojaMal: { backgroundColor: '#FEF2F2', borderTopColor: '#FECACA' },
+  hojaBien: { backgroundColor: colors.primaryTint, borderTopColor: colors.primary },
+  hojaMal: { backgroundColor: colors.errorTint, borderTopColor: colors.error },
   hojaFila: { flexDirection: 'row', gap: 14, alignItems: 'center' },
   hojaIcono: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center' },
   hojaTitulo: { fontFamily: fonts.heading, fontSize: 20 },
@@ -571,7 +571,7 @@ const styles = StyleSheet.create({
   stat: { flex: 1, borderRadius: 16, padding: 10, gap: 6, alignItems: 'center', borderBottomWidth: 4 },
   statTitulo: { fontFamily: fonts.heading, fontSize: 10, letterSpacing: 0.4 },
   statValor: { fontFamily: fonts.heading, fontSize: 20, color: colors.text },
-  vocablos: { alignSelf: 'stretch', backgroundColor: '#EEF2FF', borderRadius: 16, padding: 16, gap: 12, marginBottom: 16 },
+  vocablos: { alignSelf: 'stretch', backgroundColor: colors.mutedTint, borderRadius: 16, padding: 16, gap: 12, marginBottom: 16 },
   vocablosTitulo: { fontFamily: fonts.heading, fontSize: 15, color: colors.text },
   vocablosLista: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   vocablo: {

@@ -146,7 +146,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 8, borderRadius: 9999, backgroundColor: '#FFFFFF',
     borderWidth: 2, borderColor: colors.outline, borderBottomWidth: 4,
   },
-  chipSel: { backgroundColor: colors.primaryDark, borderColor: colors.primaryDark, borderBottomColor: '#004D33' },
+  chipSel: { backgroundColor: colors.primaryDark, borderColor: colors.primaryDark, borderBottomColor: colors.text },
   chipTexto: { fontFamily: fonts.title, fontSize: 14, color: colors.text },
   vacio: { fontFamily: fonts.body, fontSize: 15, color: colors.textMuted, textAlign: 'center', marginTop: 24 },
   tarjeta: {
@@ -160,7 +160,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryTint, paddingHorizontal: 10, paddingVertical: 3, borderRadius: 9999,
   },
   dominadaTexto: { fontFamily: fonts.heading, fontSize: 12, color: colors.primaryDark },
-  consejo: { flexDirection: 'row', gap: 12, alignItems: 'center', backgroundColor: '#EEF2FF', borderRadius: 16, padding: 16, marginTop: 8 },
+  consejo: { flexDirection: 'row', gap: 12, alignItems: 'center', backgroundColor: colors.mutedTint, borderRadius: 16, padding: 16, marginTop: 8 },
   consejoTitulo: { fontFamily: fonts.heading, fontSize: 15, color: colors.text },
   consejoTexto: { fontFamily: fonts.body, fontSize: 13, lineHeight: 18, color: colors.textMuted, marginTop: 2 },
 })

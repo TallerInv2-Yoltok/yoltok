@@ -178,7 +178,7 @@ const styles = StyleSheet.create({
   nombre: { fontFamily: fonts.heading, fontSize: 20, color: colors.text },
   correo: { fontFamily: fonts.body, fontSize: 13, color: colors.textMuted },
   lugar: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
-  proyecto: { flexDirection: 'row', gap: 8, alignItems: 'center', backgroundColor: '#EEF2FF', borderRadius: 12, padding: 12 },
+  proyecto: { flexDirection: 'row', gap: 8, alignItems: 'center', backgroundColor: colors.mutedTint, borderRadius: 12, padding: 12 },
   proyectoTexto: { flex: 1, fontFamily: fonts.body, fontSize: 13, lineHeight: 18, color: colors.text },
   rejilla: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   stat: { width: '47%', flexGrow: 1, borderRadius: 16, padding: 14, gap: 4, borderBottomWidth: 4 },
@@ -199,6 +199,6 @@ const styles = StyleSheet.create({
   metaTexto: { fontFamily: fonts.body, fontSize: 13, lineHeight: 18, color: colors.textMuted },
   barra: { height: 12, borderRadius: 9999, backgroundColor: colors.outline, overflow: 'hidden' },
   barraLlena: { height: '100%', backgroundColor: colors.primary, borderRadius: 9999 },
-  aviso: { flexDirection: 'row', gap: 12, alignItems: 'center', backgroundColor: '#EEF2FF', borderRadius: 16, padding: 16 },
+  aviso: { flexDirection: 'row', gap: 12, alignItems: 'center', backgroundColor: colors.mutedTint, borderRadius: 16, padding: 16 },
   avisoTexto: { flex: 1, fontFamily: fonts.body, fontSize: 14, lineHeight: 20, color: colors.text },
 })

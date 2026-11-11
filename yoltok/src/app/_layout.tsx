@@ -1,5 +1,9 @@
-import { NunitoSans_700Bold, NunitoSans_800ExtraBold } from '@expo-google-fonts/nunito-sans'
-import { PlusJakartaSans_500Medium, PlusJakartaSans_700Bold } from '@expo-google-fonts/plus-jakarta-sans'
+import {
+  PlusJakartaSans_500Medium,
+  PlusJakartaSans_600SemiBold,
+  PlusJakartaSans_700Bold,
+  PlusJakartaSans_800ExtraBold,
+} from '@expo-google-fonts/plus-jakarta-sans'
 import { useFonts } from 'expo-font'
 import { Stack } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
@@ -8,10 +12,10 @@ import { AuthProvider, useAuth } from '@/lib/auth'
 
 export default function RootLayout() {
   const [fuentesListas] = useFonts({
-    NunitoSans_700Bold,
-    NunitoSans_800ExtraBold,
     PlusJakartaSans_500Medium,
+    PlusJakartaSans_600SemiBold,
     PlusJakartaSans_700Bold,
+    PlusJakartaSans_800ExtraBold,
   })
   if (!fuentesListas) return null
 

@@ -213,7 +213,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10, paddingVertical: 4, borderRadius: 9999, overflow: 'hidden',
   },
   contenido: { padding: 16, gap: 14, paddingBottom: 40, maxWidth: 480, width: '100%', alignSelf: 'center' },
-  intro: { flexDirection: 'row', gap: 12, backgroundColor: '#EEF2FF', borderRadius: 16, padding: 16 },
+  intro: { flexDirection: 'row', gap: 12, backgroundColor: colors.mutedTint, borderRadius: 16, padding: 16 },
   introTexto: { fontFamily: fonts.title, fontSize: 16, lineHeight: 22, color: colors.text },
   introNota: { fontFamily: fonts.body, fontSize: 13, lineHeight: 18, color: colors.textMuted, marginTop: 4 },
   bloque: { fontFamily: fonts.heading, fontSize: 18, color: colors.primaryDark, marginTop: 8 },
@@ -226,9 +226,9 @@ const styles = StyleSheet.create({
   escala: { flexDirection: 'row', gap: 8 },
   punto: {
     flex: 1, height: 52, borderRadius: 12, alignItems: 'center', justifyContent: 'center',
-    backgroundColor: '#EEF2FF', borderBottomWidth: 4, borderBottomColor: colors.outlineLip,
+    backgroundColor: colors.mutedTint, borderBottomWidth: 4, borderBottomColor: colors.outlineLip,
   },
-  puntoSel: { backgroundColor: colors.primaryDark, borderBottomColor: '#004D33' },
+  puntoSel: { backgroundColor: colors.primaryDark, borderBottomColor: colors.text },
   puntoTexto: { fontFamily: fonts.heading, fontSize: 18, color: colors.text },
   opciones: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
   opcion: {
