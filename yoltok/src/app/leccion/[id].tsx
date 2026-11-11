@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { router, useLocalSearchParams } from 'expo-router'
 import { useEffect, useState } from 'react'
-import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { ActivityIndicator, Alert, BackHandler, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
 import { BotonAudio } from '@/components/audio'
@@ -60,6 +60,16 @@ export default function Leccion() {
   }, [id, userId])
 
   const terminada = sesion?.cola.length === 0
+
+  // El gesto/botón Atrás de Android pide confirmación igual que la ✕ (gestureEnabled solo cubre iOS).
+  useEffect(() => {
+    if (terminada) return
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      setConfirmarSalida(true)
+      return true
+    })
+    return () => sub.remove()
+  }, [terminada])
 
   async function guardar(sesion: Sesion) {
     if (!perfil) return
