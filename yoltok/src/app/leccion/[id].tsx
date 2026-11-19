@@ -1,25 +1,29 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { router, useLocalSearchParams } from 'expo-router'
-import { useEffect, useState } from 'react'
-import { ActivityIndicator, Alert, BackHandler, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { useEffect, useRef, useState } from 'react'
+import { ActivityIndicator, BackHandler, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
-import { BotonAudio } from '@/components/audio'
+import { BotonAudio, detener, reproducir } from '@/components/audio'
+import { HojaInferior } from '@/components/hoja'
 import { Button } from '@/components/ui'
 import { useAuth } from '@/lib/auth'
-import { contenido, mezclar, nuevaSesion, responder, type Ejercicio, type Par, type Sesion } from '@/lib/quiz'
+import { contenido, mezclar, nuevaSesion, responder, vocabulario, type Ejercicio, type Par, type Sesion, type Vocablo } from '@/lib/quiz'
 import { supabase } from '@/lib/supabase'
 import { colors, fonts } from '@/theme'
 
 type Resultado = { correcto: boolean; detalle: string }
+type Guardado = 'no' | 'guardando' | 'si' | 'error'
 
 const ETIQUETA: Record<string, string> = {
   opcion_multiple: 'VOCABULARIO BÁSICO',
-  comprension_auditiva: 'COMPRENSIÓN',
+  comprension_auditiva: 'COMPRENSIÓN AUDITIVA',
   emparejar_pares: 'EMPAREJAR',
 }
+// En los auditivos la pregunta no menciona la expresión: se evalúa lo que se escucha, no lo que se lee.
+const INSTRUCCION_AUDITIVA = 'Escucha el audio y selecciona su significado en español'
 
-// Lección: quiz 2x2, respuesta incorrecta y victoria (diseños de Stitch).
+// Lección: tarjetas de estudio, quiz 2x2 con repaso y vidas, y victoria (diseños de Stitch).
 export default function Leccion() {
   const { id } = useLocalSearchParams<{ id: string }>()
   const { session } = useAuth()
@@ -29,12 +33,16 @@ export default function Leccion() {
   const [perfil, setPerfil] = useState<{ vidas: number; puntos: number } | null>(null)
   const [resultado, setResultado] = useState<Resultado | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [guardado, setGuardado] = useState<'no' | 'guardando' | 'si' | 'error'>('no')
+  const [guardado, setGuardado] = useState<Guardado>('no')
+  const guardando = useRef(false) // evita dos envíos si se pulsa «Reintentar» varias veces
   const [inicio, setInicio] = useState(() => Date.now())
   const [segundos, setSegundos] = useState(0)
   // Tarjetas de «palabra nueva» antes del quiz (diseño "tarjeta_de_estudio_kowit"); null = ya en el quiz.
   const [tarjeta, setTarjeta] = useState<number | null>(0)
   const [confirmarSalida, setConfirmarSalida] = useState(false)
+  const [sinVidas, setSinVidas] = useState(false)
+  // Cada reinicio cambia la key de Opciones/Pares: borra selecciones, pares unidos y errores del intento anterior.
+  const [reinicios, setReinicios] = useState(0)
 
   useEffect(() => {
     Promise.all([
@@ -47,7 +55,12 @@ export default function Leccion() {
     ]).then(([e, u]) => {
       const fallo = e.error ?? u.error
       if (fallo) return setError(fallo.message)
-      const lista = (e.data ?? []) as unknown as Ejercicio[]
+      // Un auditivo sin audio no se puede resolver: no se presenta como si estuviera listo.
+      const lista = ((e.data ?? []) as unknown as Ejercicio[]).filter((x) => {
+        const sinAudio = x.tipo === 'comprension_auditiva' && !x.palabra?.audio_path
+        if (sinAudio) console.warn(`Ejercicio auditivo ${x.id} sin audio_path: se omite.`)
+        return !sinAudio
+      })
       if (!lista.length) return setError('Esta lección todavía no tiene ejercicios.')
       setEjercicios(Object.fromEntries(lista.map((x) => [x.id, x])))
       setSesion(nuevaSesion(lista))
@@ -59,43 +72,60 @@ export default function Leccion() {
     })
   }, [id, userId])
 
-  const terminada = sesion?.cola.length === 0
+  // Al salir de la lección se corta cualquier audio (p. ej. el de una ficha de pares).
+  useEffect(() => () => detener(), [])
 
-  // El gesto/botón Atrás de Android pide confirmación igual que la ✕ (gestureEnabled solo cubre iOS).
+  const terminada = sesion?.cola.length === 0
+  const enCurso = !!sesion && !error && !terminada
+
+  // Durante la práctica, el Atrás de Android pide confirmación igual que la ✕ (gestureEnabled solo cubre iOS).
+  // Mientras carga, si hay error o al terminar, Atrás sale normalmente.
   useEffect(() => {
-    if (terminada) return
+    if (!enCurso) return
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
       setConfirmarSalida(true)
       return true
     })
     return () => sub.remove()
-  }, [terminada])
+  }, [enCurso])
 
-  async function guardar(sesion: Sesion) {
-    if (!perfil) return
+  // Progreso y XP son dos escrituras independientes: si falla la segunda, «Reintentar» repite ambas
+  // (son idempotentes: upsert y puntos = base + xp). shortcut: para guardarlas juntas hace falta una función transaccional en Supabase.
+  async function guardar(s: Sesion) {
+    if (!perfil || guardando.current) return
+    guardando.current = true
     setGuardado('guardando')
-    const p = await supabase.from('progreso_usuarios').upsert(
-      {
-        usuario_id: userId,
-        leccion_id: id,
-        completada: true,
-        aciertos: sesion.aciertos,
-        intentos: sesion.intentos,
-        puntuacion: sesion.xp,
-        actualizado_en: new Date().toISOString(),
-      },
-      { onConflict: 'usuario_id,leccion_id' },
-    )
-    // shortcut: repetir una lección vuelve a sumar XP; limitarlo si se vuelve un problema en la evaluación.
-    // Terminar una lección recarga las vidas a 5 (decisión del equipo para la evaluación).
-    const u = p.error ? p : await supabase.from('usuarios').update({ puntos: perfil.puntos + sesion.xp, vidas: 5 }).eq('id', userId)
-    setGuardado(u.error ? 'error' : 'si')
+    try {
+      const p = await supabase.from('progreso_usuarios').upsert(
+        {
+          usuario_id: userId,
+          leccion_id: id,
+          completada: true,
+          aciertos: s.aciertos,
+          intentos: s.intentos,
+          puntuacion: s.xp,
+          actualizado_en: new Date().toISOString(),
+        },
+        { onConflict: 'usuario_id,leccion_id' },
+      )
+      if (p.error) throw p.error
+      // shortcut: repetir una lección vuelve a sumar XP; limitarlo si se vuelve un problema en la evaluación.
+      // Terminar una lección recarga las vidas a 5 (decisión del equipo para la evaluación).
+      const u = await supabase.from('usuarios').update({ puntos: perfil.puntos + s.xp, vidas: 5 }).eq('id', userId)
+      if (u.error) throw u.error
+      setGuardado('si')
+    } catch (e) {
+      console.warn('No se pudo guardar el avance:', e)
+      setGuardado('error')
+    } finally {
+      guardando.current = false
+    }
   }
 
   function evaluar(correcto: boolean, detalle: string) {
     setResultado({ correcto, detalle })
     if (!correcto && perfil) {
-      // Las vidas bajan 1 por intento fallido (también en emparejar); en 0 la lección se reinicia.
+      // Una vida por ejercicio fallado (en emparejar: al terminar el conjunto con errores); en 0 la lección se reinicia.
       const vidas = Math.max(0, perfil.vidas - 1)
       setPerfil({ ...perfil, vidas })
       supabase.from('usuarios').update({ vidas }).eq('id', userId).then()
@@ -113,22 +143,16 @@ export default function Leccion() {
     setPerfil({ ...perfil, vidas: 5 })
     supabase.from('usuarios').update({ vidas: 5 }).eq('id', userId).then()
     setSesion(nuevaSesion(Object.values(ejercicios)))
+    setReinicios(reinicios + 1)
     setResultado(null)
+    setSinVidas(false)
     setInicio(Date.now())
   }
 
   function continuar() {
     // Chequeo explícito en vez de `!`: el React Compiler lee `resultado!.correcto` al renderizar y truena si es null.
     if (!resultado || !sesion || !ejercicios || !perfil) return
-    if (!resultado.correcto && perfil.vidas === 0) {
-      Alert.alert(
-        '¡Se agotaron tus vidas!',
-        'La lección se reiniciará desde el principio y recuperarás tus 5 corazones.',
-        [{ text: 'Reiniciar lección', onPress: reiniciar }],
-        { cancelable: false },
-      )
-      return
-    }
+    if (!resultado.correcto && perfil.vidas === 0) return setSinVidas(true)
     const nueva = responder(sesion, ejercicios[sesion.cola[0]], resultado.correcto)
     setSesion(nueva)
     setResultado(null)
@@ -151,15 +175,27 @@ export default function Leccion() {
   }
 
   const total = Object.keys(ejercicios).length
+  const palabras = vocabulario(Object.values(ejercicios))
 
   if (terminada) {
-    return <Victoria sesion={sesion} ejercicios={Object.values(ejercicios)} segundos={segundos} guardado={guardado} reintentar={() => guardar(sesion)} />
+    return <Victoria sesion={sesion} total={total} vocablos={palabras} segundos={segundos} guardado={guardado} reintentar={() => guardar(sesion)} />
   }
 
-  const salida = <HojaSalida visible={confirmarSalida} onSeguir={() => setConfirmarSalida(false)} onSalir={() => router.back()} />
+  const salida = (
+    <HojaInferior
+      visible={confirmarSalida}
+      onCerrar={() => setConfirmarSalida(false)}
+      icono={<Text style={{ fontSize: 48 }}>🥺</Text>}
+      titulo="¿Seguro que quieres salir?"
+      texto="Si sales ahora, perderás el progreso y los puntos XP obtenidos en esta lección."
+    >
+      <Button variant="secondary" title="Seguir aprendiendo" onPress={() => setConfirmarSalida(false)} />
+      <Pressable onPress={() => router.back()} accessibilityRole="button" hitSlop={8}>
+        <Text style={styles.salidaSalir}>SALIR A LA RUTA DE APRENDIZAJE</Text>
+      </Pressable>
+    </HojaInferior>
+  )
 
-  // Palabras de la lección, sin repetir, en el orden de los ejercicios.
-  const palabras = [...new Map(Object.values(ejercicios).sort((a, b) => a.orden - b.orden).filter((e) => e.palabra).map((e) => [e.palabra!.palabra_nahuat, e.palabra!])).values()]
   if (tarjeta !== null && tarjeta < palabras.length) {
     const p = palabras[tarjeta]
     const ultima = tarjeta === palabras.length - 1
@@ -200,6 +236,11 @@ export default function Leccion() {
   const actual = ejercicios[sesion.cola[0]]
   const hechos = total - new Set(sesion.cola).size
   const c = contenido(actual)
+  const auditivo = actual.tipo === 'comprension_auditiva'
+  const audio = actual.palabra?.audio_path
+  // Un ejercicio ya fallado no vuelve a dar XP en el repaso.
+  const daXp = !sesion.fallados.includes(actual.id)
+  const llave = `${actual.id}-${sesion.intentos}-${reinicios}`
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -208,21 +249,27 @@ export default function Leccion() {
       <ScrollView contentContainerStyle={styles.contenido}>
         <View style={styles.chips}>
           <Text style={styles.chipTipo}>{ETIQUETA[actual.tipo] ?? 'EJERCICIO'}</Text>
-          <Text style={styles.chipXp}>+{actual.puntos} XP</Text>
+          <Text style={[styles.chipXp, !daXp && styles.chipRepaso]}>{daXp ? `+${actual.puntos} XP` : 'REPASO · SIN XP'}</Text>
         </View>
-        <Text style={styles.pregunta}>{actual.instruccion}</Text>
-        {/* Solo si la pregunta muestra la palabra en náhuatl; si la palabra es la respuesta, el audio la delataría. */}
-        {actual.palabra?.audio_path && actual.instruccion.includes(actual.palabra.palabra_nahuat) && (
-          <View style={styles.audio}>
-            <BotonAudio audioPath={actual.palabra.audio_path} etiqueta={actual.palabra.palabra_nahuat} tamano={64} />
-            <Text style={styles.audioTexto}>Toca para escuchar</Text>
+        <Text style={styles.pregunta}>{auditivo ? INSTRUCCION_AUDITIVA : actual.instruccion}</Text>
+        {auditivo && audio ? (
+          <View style={styles.audioCentral}>
+            <BotonAudio key={llave} audioPath={audio} etiqueta="la expresión del ejercicio" tamano={112} />
+            <Text style={styles.escuchar}>TOCA PARA ESCUCHAR LA PALABRA</Text>
           </View>
-        )}
-        {/* key: cada intento (incluido el repaso) empieza sin selección */}
-        {c.clase === 'opciones' ? (
-          <Opciones key={`${actual.id}-${sesion.intentos}`} opciones={c.opciones} correcta={c.correcta} bloqueado={!!resultado} onEvaluar={evaluar} />
         ) : (
-          <Pares key={`${actual.id}-${sesion.intentos}`} pares={c.pares} bloqueado={!!resultado} onEvaluar={evaluar} />
+          // En vocabulario solo si la pregunta muestra la palabra; si la palabra es la respuesta, el audio la delataría.
+          audio && actual.palabra && actual.instruccion.includes(actual.palabra.palabra_nahuat) && (
+            <View style={styles.audio}>
+              <BotonAudio audioPath={audio} etiqueta={actual.palabra.palabra_nahuat} tamano={64} />
+              <Text style={styles.audioTexto}>Toca para escuchar</Text>
+            </View>
+          )
+        )}
+        {c.clase === 'opciones' ? (
+          <Opciones key={llave} opciones={c.opciones} correcta={c.correcta} bloqueado={!!resultado} onEvaluar={evaluar} />
+        ) : (
+          <Pares key={llave} pares={c.pares} bloqueado={!!resultado} onEvaluar={evaluar} />
         )}
       </ScrollView>
 
@@ -239,11 +286,24 @@ export default function Leccion() {
               <Text style={[styles.hojaDetalle, { color: resultado.correcto ? colors.text : colors.errorLip }]}>{resultado.detalle}</Text>
               {!resultado.correcto && <Text style={styles.hojaNota}>Se agregará al repaso final de la lección.</Text>}
             </View>
+            {/* Volver a escuchar la expresión antes de seguir (refuerza la retención). */}
+            {c.clase === 'opciones' && audio && actual.palabra && (
+              <BotonAudio audioPath={audio} etiqueta={actual.palabra.palabra_nahuat} tamano={44} />
+            )}
           </View>
           <BotonHoja correcto={resultado.correcto} onPress={continuar} />
         </View>
       )}
       {salida}
+      <HojaInferior
+        visible={sinVidas}
+        icono={<MaterialCommunityIcons name="heart-broken" size={52} color={colors.error} />}
+        fondoIcono={colors.errorTint}
+        titulo="¡Te quedaste sin corazones!"
+        texto="Repasemos desde el inicio con tus 5 vidas restauradas."
+      >
+        <Button title="Reiniciar lección" onPress={reiniciar} />
+      </HojaInferior>
     </SafeAreaView>
   )
 }
@@ -262,27 +322,6 @@ function Cabecera({ avance, etiqueta, vidas, onSalir }: { avance: number; etique
         <Text style={styles.vidasTexto}>{vidas}</Text>
       </View>
     </View>
-  )
-}
-
-// Hoja inferior del diseño "confirmacion_de_salida_tarjeta_kowit".
-function HojaSalida({ visible, onSeguir, onSalir }: { visible: boolean; onSeguir: () => void; onSalir: () => void }) {
-  return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onSeguir} statusBarTranslucent>
-      <Pressable style={styles.velo} onPress={onSeguir} accessibilityLabel="Cerrar" />
-      <View style={styles.salida}>
-        <View style={styles.salidaAsa} />
-        <View style={styles.salidaEmoji}><Text style={{ fontSize: 48 }}>🥺</Text></View>
-        <Text style={styles.salidaTitulo}>¿Seguro que quieres salir?</Text>
-        <Text style={styles.salidaTexto}>Si sales ahora, perderás el progreso y los puntos XP obtenidos en esta lección.</Text>
-        <View style={{ alignSelf: 'stretch', gap: 12, marginTop: 8 }}>
-          <Button variant="secondary" title="Seguir aprendiendo" onPress={onSeguir} />
-          <Pressable onPress={onSalir} accessibilityRole="button" hitSlop={8}>
-            <Text style={styles.salidaSalir}>SALIR AL MENÚ PRINCIPAL</Text>
-          </Pressable>
-        </View>
-      </View>
-    </Modal>
   )
 }
 
@@ -331,26 +370,33 @@ function Opciones({ opciones, correcta, bloqueado, onEvaluar }: {
 function Pares({ pares, bloqueado, onEvaluar }: {
   pares: Par[]; bloqueado: boolean; onEvaluar: (correcto: boolean, detalle: string) => void
 }) {
-  const [izq] = useState(() => mezclar(pares.map((p) => p.nahuat)))
+  const [izq] = useState(() => mezclar(pares))
   const [der] = useState(() => mezclar(pares.map((p) => p.espanol)))
   const [elegido, setElegido] = useState<string | null>(null)
   const [unidos, setUnidos] = useState<string[]>([])
   const [errores, setErrores] = useState(0)
-  const [fallo, setFallo] = useState<string | null>(null)
+  const [fallo, setFallo] = useState<{ nahuat: string; espanol: string } | null>(null)
+
+  // Tocar la palabra en náhuat la pronuncia: sonido + escritura + significado.
+  function tocarIzquierda(p: Par) {
+    setElegido(p.nahuat)
+    setFallo(null)
+    if (p.audio_path) reproducir(p.audio_path)
+  }
 
   function tocarDerecha(espanol: string) {
     if (!elegido) return
     const correcto = pares.some((p) => p.nahuat === elegido && p.espanol === espanol)
     if (!correcto) {
       setErrores(errores + 1)
-      setFallo(espanol)
-      setTimeout(() => setFallo(null), 600)
+      setFallo({ nahuat: elegido, espanol })
       setElegido(null)
       return
     }
     const nuevos = [...unidos, elegido]
     setUnidos(nuevos)
     setElegido(null)
+    setFallo(null)
     if (nuevos.length === pares.length) {
       onEvaluar(errores === 0, errores === 0 ? '¡Uniste todos los pares sin errores!' : `Completaste los pares con ${errores} ${errores === 1 ? 'error' : 'errores'}.`)
     }
@@ -359,41 +405,56 @@ function Pares({ pares, bloqueado, onEvaluar }: {
   const unidoDer = (espanol: string) => pares.some((p) => p.espanol === espanol && unidos.includes(p.nahuat))
 
   return (
-    <View style={styles.pares}>
-      <View style={styles.columna}>
-        {izq.map((n) => {
-          const hecho = unidos.includes(n)
-          return (
-            <Pressable
-              key={n}
-              disabled={hecho || bloqueado}
-              onPress={() => setElegido(n)}
-              accessibilityRole="button"
-              accessibilityState={{ selected: elegido === n, disabled: hecho }}
-              style={[styles.ficha, elegido === n && styles.opcionSel, hecho && styles.fichaHecha]}
-            >
-              <Text style={[styles.fichaTexto, styles.fichaNahuat, hecho && { color: colors.primaryDark }]}>{n}</Text>
-            </Pressable>
-          )
-        })}
+    <View style={{ gap: 12 }}>
+      <Text style={styles.paresNota}>Si te equivocas en algún par, perderás una vida al terminar el conjunto.</Text>
+      <View style={styles.pares}>
+        <View style={styles.columna}>
+          {izq.map((p) => {
+            const hecho = unidos.includes(p.nahuat)
+            const sel = elegido === p.nahuat
+            return (
+              <Pressable
+                key={p.nahuat}
+                disabled={hecho || bloqueado}
+                onPress={() => tocarIzquierda(p)}
+                accessibilityRole="button"
+                accessibilityHint={p.audio_path ? 'Reproduce su pronunciación' : undefined}
+                accessibilityState={{ selected: sel, disabled: hecho }}
+                style={[styles.ficha, sel && styles.opcionSel, hecho && styles.fichaHecha]}
+              >
+                <View style={styles.fichaFila}>
+                  <Text style={[styles.fichaTexto, styles.fichaNahuat, hecho && { color: colors.primaryDark }]}>{p.nahuat}</Text>
+                  {sel && p.audio_path && <MaterialCommunityIcons name="volume-high" size={16} color={colors.secondaryLip} />}
+                </View>
+              </Pressable>
+            )
+          })}
+        </View>
+        <View style={styles.columna}>
+          {der.map((e) => {
+            const hecho = unidoDer(e)
+            return (
+              <Pressable
+                key={e}
+                disabled={hecho || bloqueado}
+                onPress={() => tocarDerecha(e)}
+                accessibilityRole="button"
+                accessibilityState={{ disabled: hecho }}
+                style={[styles.ficha, fallo?.espanol === e && styles.opcionMal, hecho && styles.fichaHecha]}
+              >
+                <Text style={[styles.fichaTexto, hecho && { color: colors.primaryDark }]}>{e}</Text>
+              </Pressable>
+            )
+          })}
+        </View>
       </View>
-      <View style={styles.columna}>
-        {der.map((e) => {
-          const hecho = unidoDer(e)
-          return (
-            <Pressable
-              key={e}
-              disabled={hecho || bloqueado}
-              onPress={() => tocarDerecha(e)}
-              accessibilityRole="button"
-              accessibilityState={{ disabled: hecho }}
-              style={[styles.ficha, fallo === e && styles.opcionMal, hecho && styles.fichaHecha]}
-            >
-              <Text style={[styles.fichaTexto, hecho && { color: colors.primaryDark }]}>{e}</Text>
-            </Pressable>
-          )
-        })}
-      </View>
+      {/* El rojo de la ficha se acompaña de un mensaje que también leen los lectores de pantalla. */}
+      {fallo && (
+        <View style={styles.paresFallo} accessibilityLiveRegion="polite">
+          <MaterialCommunityIcons name="alert-circle-outline" size={18} color={colors.errorLip} />
+          <Text style={styles.paresFalloTexto}>«{fallo.nahuat}» no significa «{fallo.espanol}». Intenta con otra pareja.</Text>
+        </View>
+      )}
     </View>
   )
 }
@@ -415,50 +476,58 @@ function BotonHoja({ correcto, onPress }: { correcto: boolean; onPress: () => vo
   )
 }
 
-function Victoria({ sesion, ejercicios, segundos, guardado, reintentar }: {
-  sesion: Sesion; ejercicios: Ejercicio[]; segundos: number; guardado: string; reintentar: () => void
+// Victoria cultural: lema, desglose de XP y precisión, y las palabras practicadas con su audio para repasar.
+function Victoria({ sesion, total, vocablos, segundos, guardado, reintentar }: {
+  sesion: Sesion; total: number; vocablos: Vocablo[]; segundos: number; guardado: Guardado; reintentar: () => void
 }) {
-  const precision = Math.round((sesion.aciertos / ejercicios.length) * 100)
+  const precision = Math.round((sesion.aciertos / total) * 100)
   const tiempo = `${Math.floor(segundos / 60)}:${String(segundos % 60).padStart(2, '0')}`
-  const vocablos = [...new Map(ejercicios.filter((e) => e.palabra).map((e) => [e.palabra!.palabra_nahuat, e.palabra!])).values()]
 
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={[styles.contenido, { alignItems: 'center' }]}>
         <View style={styles.medalla}>
-          <MaterialCommunityIcons name="medal" size={64} color={colors.tertiary} />
+          <MaterialCommunityIcons name="flower-tulip-outline" size={64} color={colors.tertiary} />
         </View>
         <Text style={styles.finalizada}>LECCIÓN FINALIZADA</Text>
-        <Text style={styles.victoriaTitulo}>¡Módulo completado!</Text>
-        <Text style={styles.victoriaTexto}>Has practicado con éxito el vocabulario básico de náhuatl del sur de Veracruz.</Text>
+        <Text style={styles.victoriaTitulo}>¡Omoxochiyoti motlahtol!</Text>
+        <Text style={styles.victoriaLema}>¡Tu palabra ha florecido!</Text>
+        <Text style={styles.victoriaTexto}>Practicaste {vocablos.length} palabras del náhuatl del sur de Veracruz.</Text>
 
         <View style={styles.stats}>
           <Stat titulo="XP GANADOS" valor={`+${sesion.xp}`} icono="lightning-bolt" color={colors.tertiary} fondo={colors.tertiaryTint} />
           <Stat titulo="PRECISIÓN" valor={`${precision}%`} icono="target" color={colors.primary} fondo={colors.primaryTint} />
           <Stat titulo="TIEMPO" valor={tiempo} icono="timer-outline" color={colors.secondary} fondo={colors.secondaryTint} />
         </View>
+        <Text style={styles.desglose}>
+          {sesion.aciertos} de {total} ejercicios correctos al primer intento · {sesion.intentos} respuestas en total
+        </Text>
 
         {vocablos.length > 0 && (
           <View style={styles.vocablos}>
-            <Text style={styles.vocablosTitulo}>Vocablos aprendidos · {vocablos.length}</Text>
-            <View style={styles.vocablosLista}>
-              {vocablos.map((v) => (
-                <Text key={v.palabra_nahuat} style={styles.vocablo}>
-                  {v.palabra_nahuat} <Text style={{ color: colors.textMuted }}>({v.traduccion_espanol})</Text>
-                </Text>
-              ))}
-            </View>
+            <Text style={styles.vocablosTitulo}>Palabras practicadas · {vocablos.length}</Text>
+            {vocablos.map((v) => (
+              <View key={v.palabra_nahuat} style={styles.vocablo}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.vocabloNahuat}>{v.palabra_nahuat}</Text>
+                  <Text style={styles.vocabloEspanol}>{v.traduccion_espanol}</Text>
+                </View>
+                {v.audio_path && <BotonAudio audioPath={v.audio_path} etiqueta={v.palabra_nahuat} tamano={36} />}
+              </View>
+            ))}
           </View>
         )}
 
-        <View style={{ alignSelf: 'stretch', gap: 12, marginTop: 8 }}>
-          {guardado === 'error' && <Text style={styles.error}>No se pudo guardar tu avance. Revisa tu conexión.</Text>}
+        <View style={{ alignSelf: 'stretch', gap: 12, marginTop: 8 }} accessibilityLiveRegion="polite">
+          {guardado === 'guardando' && <Text style={styles.estadoGuardado}>Guardando tu avance…</Text>}
+          {guardado === 'si' && <Text style={[styles.estadoGuardado, { color: colors.primaryText }]}>✓ Avance guardado</Text>}
+          {guardado === 'error' && <Text style={styles.error}>No se pudo guardar tu avance. Revisa tu conexión e inténtalo de nuevo.</Text>}
           {guardado === 'error' ? (
             <Button title="Reintentar guardar" onPress={reintentar} />
           ) : (
             <>
-              <Button title={guardado === 'si' ? 'Evaluar usabilidad de la app' : 'Guardando…'} disabled={guardado !== 'si'} onPress={() => router.replace('/encuesta')} />
-              <Button variant="text" title="Continuar sin evaluar" disabled={guardado !== 'si'} onPress={() => router.back()} />
+              <Button title={guardado === 'si' ? 'Responder la evaluación' : 'Guardando…'} disabled={guardado !== 'si'} onPress={() => router.replace('/encuesta')} />
+              <Button variant="text" title="Volver a la ruta sin evaluar" disabled={guardado !== 'si'} onPress={() => router.back()} />
             </>
           )}
         </View>
@@ -500,9 +569,11 @@ const styles = StyleSheet.create({
     fontFamily: fonts.heading, fontSize: 12, color: colors.tertiaryLip,
     backgroundColor: colors.tertiaryTint, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 9999, overflow: 'hidden',
   },
+  chipRepaso: { color: colors.textMuted, backgroundColor: colors.mutedTint },
   pregunta: { fontFamily: fonts.heading, fontSize: 22, lineHeight: 28, color: colors.text, marginVertical: 20 },
   rejilla: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   audio: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: -8, marginBottom: 20 },
+  audioCentral: { alignItems: 'center', gap: 10, marginTop: -4, marginBottom: 24 },
   chipNueva: {
     fontFamily: fonts.heading, fontSize: 13, letterSpacing: 0.5, color: colors.tertiaryLip, backgroundColor: colors.tertiaryTint,
     paddingHorizontal: 16, paddingVertical: 8, borderRadius: 9999, overflow: 'hidden', marginBottom: 16,
@@ -517,15 +588,6 @@ const styles = StyleSheet.create({
   estudioTraduccion: { fontFamily: fonts.body, fontSize: 22, color: colors.textMuted, textAlign: 'center' },
   estudioNota: { flexDirection: 'row', gap: 10, alignSelf: 'stretch', backgroundColor: colors.mutedTint, borderRadius: 16, padding: 14, marginTop: 8 },
   estudioNotaTexto: { flex: 1, fontFamily: fonts.body, fontSize: 14, lineHeight: 20, color: colors.text },
-  velo: { flex: 1, backgroundColor: 'rgba(22, 64, 58, 0.35)' },
-  salida: {
-    backgroundColor: '#FFFFFF', borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, paddingBottom: 40,
-    alignItems: 'center', gap: 10,
-  },
-  salidaAsa: { width: 48, height: 5, borderRadius: 3, backgroundColor: colors.outline, marginBottom: 8 },
-  salidaEmoji: { width: 96, height: 96, borderRadius: 48, backgroundColor: colors.tertiaryTint, alignItems: 'center', justifyContent: 'center' },
-  salidaTitulo: { fontFamily: fonts.heading, fontSize: 24, color: colors.text, textAlign: 'center', marginTop: 8 },
-  salidaTexto: { fontFamily: fonts.body, fontSize: 15, lineHeight: 22, color: colors.textMuted, textAlign: 'center' },
   salidaSalir: { fontFamily: fonts.heading, fontSize: 15, letterSpacing: 0.5, color: colors.error, textAlign: 'center', paddingVertical: 8 },
   audioTexto: { fontFamily: fonts.title, fontSize: 15, color: colors.secondaryLip },
   opcion: {
@@ -536,15 +598,19 @@ const styles = StyleSheet.create({
   opcionBien: { backgroundColor: colors.primaryTint, borderColor: colors.primary, borderBottomColor: colors.primaryLip },
   opcionMal: { backgroundColor: colors.errorTint, borderColor: colors.error, borderBottomColor: colors.errorLip },
   opcionTexto: { fontFamily: fonts.bodyBold, fontSize: 16, lineHeight: 22, color: colors.text, textAlign: 'center' },
+  paresNota: { fontFamily: fonts.body, fontSize: 13, lineHeight: 18, color: colors.textMuted, marginTop: -8 },
   pares: { flexDirection: 'row', gap: 12 },
   columna: { flex: 1, gap: 12 },
   ficha: {
     minHeight: 64, justifyContent: 'center', padding: 12,
     backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 2, borderColor: colors.outline, borderBottomWidth: 4,
   },
+  fichaFila: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   fichaHecha: { backgroundColor: colors.primaryTint, borderColor: colors.primary, borderBottomColor: colors.primaryLip },
   fichaTexto: { fontFamily: fonts.body, fontSize: 15, color: colors.text, textAlign: 'center' },
-  fichaNahuat: { fontFamily: fonts.bodyBold },
+  fichaNahuat: { fontFamily: fonts.bodyBold, flexShrink: 1 },
+  paresFallo: { flexDirection: 'row', gap: 8, alignItems: 'center', backgroundColor: colors.errorTint, borderRadius: 12, padding: 12 },
+  paresFalloTexto: { flex: 1, fontFamily: fonts.semibold, fontSize: 14, lineHeight: 20, color: colors.errorLip },
   hoja: { position: 'absolute', left: 0, right: 0, bottom: 0, padding: 16, paddingBottom: 32, gap: 16, borderTopWidth: 2 },
   hojaBien: { backgroundColor: colors.primaryTint, borderTopColor: colors.primary },
   hojaMal: { backgroundColor: colors.errorTint, borderTopColor: colors.error },
@@ -565,17 +631,21 @@ const styles = StyleSheet.create({
     fontFamily: fonts.heading, fontSize: 13, letterSpacing: 0.5, color: colors.primaryDark, marginTop: 20,
     backgroundColor: colors.secondaryTint, paddingHorizontal: 14, paddingVertical: 6, borderRadius: 9999, overflow: 'hidden',
   },
-  victoriaTitulo: { fontFamily: fonts.heading, fontSize: 28, color: colors.text, marginTop: 10 },
+  victoriaTitulo: { fontFamily: fonts.heading, fontSize: 28, color: colors.text, marginTop: 10, textAlign: 'center' },
+  victoriaLema: { fontFamily: fonts.title, fontSize: 17, color: colors.tertiaryLip, marginTop: 2, textAlign: 'center' },
   victoriaTexto: { fontFamily: fonts.body, fontSize: 15, lineHeight: 22, color: colors.textMuted, textAlign: 'center', marginTop: 6 },
-  stats: { flexDirection: 'row', gap: 8, marginVertical: 24, alignSelf: 'stretch' },
+  stats: { flexDirection: 'row', gap: 8, marginTop: 24, marginBottom: 10, alignSelf: 'stretch' },
   stat: { flex: 1, borderRadius: 16, padding: 10, gap: 6, alignItems: 'center', borderBottomWidth: 4 },
   statTitulo: { fontFamily: fonts.heading, fontSize: 10, letterSpacing: 0.4 },
   statValor: { fontFamily: fonts.heading, fontSize: 20, color: colors.text },
-  vocablos: { alignSelf: 'stretch', backgroundColor: colors.mutedTint, borderRadius: 16, padding: 16, gap: 12, marginBottom: 16 },
+  desglose: { fontFamily: fonts.body, fontSize: 13, color: colors.textMuted, textAlign: 'center', marginBottom: 20 },
+  vocablos: { alignSelf: 'stretch', backgroundColor: colors.mutedTint, borderRadius: 16, padding: 16, gap: 10, marginBottom: 16 },
   vocablosTitulo: { fontFamily: fonts.heading, fontSize: 15, color: colors.text },
-  vocablosLista: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   vocablo: {
-    fontFamily: fonts.bodyBold, fontSize: 13, color: colors.text, backgroundColor: '#FFFFFF',
-    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 9999, overflow: 'hidden',
+    flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#FFFFFF', borderRadius: 14,
+    borderWidth: 1, borderColor: colors.outline, borderBottomWidth: 3, paddingVertical: 10, paddingHorizontal: 14,
   },
+  vocabloNahuat: { fontFamily: fonts.heading, fontSize: 16, color: colors.text },
+  vocabloEspanol: { fontFamily: fonts.body, fontSize: 14, color: colors.textMuted },
+  estadoGuardado: { fontFamily: fonts.semibold, fontSize: 14, color: colors.textMuted, textAlign: 'center' },
 })

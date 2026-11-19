@@ -1,5 +1,5 @@
 // Ejecutar con: node src/lib/quiz.test.ts
-import { contenido, mezclar, nuevaSesion, responder, type Ejercicio } from './quiz.ts'
+import { contenido, mezclar, nuevaSesion, responder, vocabulario, type Ejercicio } from './quiz.ts'
 
 function igual(real: unknown, esperado: unknown, que: string) {
   if (JSON.stringify(real) !== JSON.stringify(esperado)) throw new Error(`${que}: esperaba ${JSON.stringify(esperado)}, salió ${JSON.stringify(real)}`)
@@ -26,5 +26,17 @@ igual(lanzo, true, 'rechaza responder un ejercicio que no es el actual')
 
 igual(contenido({ ...a, tipo: 'emparejar_pares', opciones: { pares: [{ nahuat: 'x', espanol: 'y' }] } }).clase, 'pares', 'pares')
 igual(contenido({ ...a, tipo: 'comprension_auditiva' }).clase, 'opciones', 'auditiva como opciones')
+const pal = (n: string, audio: string | null = null) => ({ palabra_nahuat: n, traduccion_espanol: n + '-es', audio_path: audio })
+const voc = vocabulario([
+  { ...a, orden: 2, palabra: pal('Tago') },
+  { ...a, orden: 1, palabra: pal('Ximotali') },
+  { ...b, orden: 3, tipo: 'emparejar_pares', palabra: pal('Wewehcho'), opciones: { pares: [
+    { nahuat: 'Ximotali', espanol: 'Siéntate', audio_path: 'x.mp3' },
+    { nahuat: 'Ajayo’', espanol: 'Frijol', audio_path: 'ajayo_frijol.mp3', descripcion: 'd' },
+  ] } },
+])
+igual(voc.map((v) => v.palabra_nahuat), ['Ximotali', 'Tago', 'Wewehcho', 'Ajayo’'], 'vocabulario: orden, pares incluidos, sin duplicados')
+igual(voc[3].audio_path, 'ajayo_frijol.mp3', 'vocabulario: la palabra que solo viene en pares conserva su audio')
+igual(voc[0].audio_path, 'x.mp3', 'vocabulario: completa el audio que faltaba')
 igual(mezclar([1, 2, 3, 4]).sort(), [1, 2, 3, 4], 'mezclar conserva elementos')
 console.log('quiz.test.ts OK')

@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { Encabezado } from '@/components/encabezado'
 import { Button } from '@/components/ui'
 import { useAuth } from '@/lib/auth'
+import { vocabulario, type Ejercicio } from '@/lib/quiz'
 import { supabase } from '@/lib/supabase'
 import { colors, fonts } from '@/theme'
 
@@ -18,7 +19,7 @@ type Datos = {
   lecciones: number
   completadas: number
   precision: number | null
-  dominadas: number
+  practicadas: number
   encuesta: boolean
 }
 
@@ -36,7 +37,7 @@ export default function Perfil() {
       supabase.from('usuarios').select('nombre, puntos, vidas').eq('id', userId).maybeSingle(),
       supabase.from('lecciones').select('id'),
       supabase.from('progreso_usuarios').select('leccion_id, aciertos').eq('usuario_id', userId).eq('completada', true),
-      supabase.from('ejercicios').select('leccion_id, palabra_id'),
+      supabase.from('ejercicios').select('leccion_id, tipo, opciones, orden, palabra:palabras(palabra_nahuat, traduccion_espanol)'),
       supabase.from('encuestas_usabilidad').select('id').eq('usuario_id', userId).maybeSingle(),
     ]).then(([u, l, pr, e, en]) => {
       const fallo = u.error ?? l.error ?? pr.error ?? e.error ?? en.error
@@ -53,7 +54,8 @@ export default function Perfil() {
         completadas: hechas.size,
         // Aciertos al primer intento sobre ejercicios de lecciones completadas (igual que en la victoria).
         precision: ejerciciosHechos.length ? Math.round((aciertos / ejerciciosHechos.length) * 100) : null,
-        dominadas: new Set(ejerciciosHechos.map((x) => x.palabra_id).filter(Boolean)).size,
+        // Palabras vistas en lecciones completadas (también las que solo vienen en los pares); no mide dominio por palabra.
+        practicadas: vocabulario(ejerciciosHechos as unknown as Ejercicio[]).length,
         encuesta: !!en.data,
       })
     })
@@ -99,7 +101,7 @@ export default function Perfil() {
               valor={datos.precision === null ? '—' : `${datos.precision}%`}
               pie="Precisión al primer intento"
             />
-            <Stat icono="book-check-outline" color={colors.secondaryLip} fondo={colors.secondaryTint} titulo="VOCABULARIO" valor={String(datos.dominadas)} pie="Palabras dominadas" />
+            <Stat icono="book-check-outline" color={colors.secondaryLip} fondo={colors.secondaryTint} titulo="VOCABULARIO" valor={String(datos.practicadas)} pie="Palabras practicadas" />
           </View>
 
           <View style={styles.metasTitulo}>

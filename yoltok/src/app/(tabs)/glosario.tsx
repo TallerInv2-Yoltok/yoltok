@@ -7,7 +7,8 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { BotonAudio } from '@/components/audio'
 import { Encabezado } from '@/components/encabezado'
 import { useAuth } from '@/lib/auth'
-import { filtrarPalabras, type Palabra } from '@/lib/glosario'
+import { CON_AUDIO, filtrarPalabras, ordenarPalabras, type Palabra } from '@/lib/glosario'
+import { vocabulario, type Ejercicio } from '@/lib/quiz'
 import { supabase } from '@/lib/supabase'
 import { colors, fonts } from '@/theme'
 
@@ -18,7 +19,7 @@ export default function Glosario() {
   const { session } = useAuth()
   const [palabras, setPalabras] = useState<Palabra[] | null>(null)
   const [categorias, setCategorias] = useState<Categoria[]>([])
-  const [dominadas, setDominadas] = useState<Set<string>>(new Set())
+  const [practicadas, setPracticadas] = useState<Set<string>>(new Set())
   const [texto, setTexto] = useState('')
   const [categoria, setCategoria] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -29,20 +30,23 @@ export default function Glosario() {
       supabase.from('palabras').select('id, palabra_nahuat, traduccion_espanol, categoria_id, audio_path').neq('palabra_nahuat', '').order('palabra_nahuat'),
       supabase.from('categorias').select('id, nombre').order('orden'),
       supabase.from('progreso_usuarios').select('leccion_id').eq('usuario_id', session.user.id).eq('completada', true),
-      supabase.from('ejercicios').select('palabra_id, leccion_id'),
+      supabase.from('ejercicios').select('leccion_id, tipo, opciones, orden, palabra:palabras(palabra_nahuat, traduccion_espanol)'),
     ]).then(([p, c, pr, e]) => {
       const fallo = p.error ?? c.error ?? pr.error ?? e.error
       if (fallo) return setError(fallo.message)
-      // «Dominada» = aparece en un ejercicio de una lección que el usuario ya completó.
+      // «Practicada» = aparece (también dentro de los pares) en una lección que el usuario ya completó.
       const hechas = new Set((pr.data ?? []).map((x) => x.leccion_id))
-      setDominadas(new Set((e.data ?? []).filter((x) => x.palabra_id && hechas.has(x.leccion_id)).map((x) => x.palabra_id as string)))
-      setPalabras(p.data ?? [])
+      const vistas = vocabulario((e.data ?? []).filter((x) => hechas.has(x.leccion_id)) as unknown as Ejercicio[])
+      const nuevas = new Set(vistas.map((v) => v.palabra_nahuat))
+      setPracticadas(nuevas)
+      setPalabras(ordenarPalabras(p.data ?? [], nuevas))
       setCategorias(c.data ?? [])
     })
   }, [session]))
 
   const visibles = palabras ? filtrarPalabras(palabras, texto, categoria) : []
-  const chips = [{ id: null, nombre: `Todos (${palabras?.length ?? 0})` }, ...categorias]
+  const conAudio = palabras?.filter((p) => p.audio_path).length ?? 0
+  const chips = [{ id: null, nombre: `Todos (${palabras?.length ?? 0})` }, { id: CON_AUDIO, nombre: `🔊 Con audio (${conAudio})` }, ...categorias]
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -100,10 +104,10 @@ export default function Glosario() {
               <View style={{ flex: 1, gap: 4 }}>
                 <Text style={styles.nahuatl}>{item.palabra_nahuat}</Text>
                 <Text style={styles.espanol}>{item.traduccion_espanol}</Text>
-                {dominadas.has(item.id) && (
+                {practicadas.has(item.palabra_nahuat) && (
                   <View style={styles.dominada}>
                     <MaterialCommunityIcons name="check-circle-outline" size={14} color={colors.primaryDark} />
-                    <Text style={styles.dominadaTexto}>Dominada</Text>
+                    <Text style={styles.dominadaTexto}>Practicada</Text>
                   </View>
                 )}
               </View>

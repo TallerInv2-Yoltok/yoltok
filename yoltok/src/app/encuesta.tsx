@@ -22,55 +22,115 @@ const BLOQUE_SATISFACCION: Likert[] = [
   { clave: 'motivacion', texto: 'Los puntos, vidas y retos me motivaron a seguir aprendiendo.' },
   { clave: 'utilidad', texto: 'La aplicación me sirve para estudiar y preservar el náhuatl.' },
 ]
-// Reactivos de retención léxica inmediata: palabras de la lección 1.
+// Reactivos de retención léxica inmediata: palabras estudiadas en el Módulo 1.
 const LEXICOS = [
-  { palabra: 'Tasohkamati', correcta: 'Gracias', opciones: ['Gracias', 'Siéntate', 'Estoy bien', 'Hasta mañana'] },
-  { palabra: 'Ximotali', correcta: 'Siéntate', opciones: ['Escribe', 'Siéntate', 'Gracias', '¿Cómo estás?'] },
-  { palabra: 'Niyegonok', correcta: 'Estoy bien', opciones: ['¿Dónde vas?', 'Mañana nos vemos', 'Estoy bien', 'Siéntate'] },
+  { palabra: 'Ximotali', correcta: 'Siéntate', opciones: ['Siéntate', 'Camarón', 'Muchacha', 'Pescado'] },
+  { palabra: 'Chagalin', correcta: 'Camarón', opciones: ['Camarón', 'Pescado', 'Pavo / Guajolote', 'Frijol'] },
+  { palabra: 'Ajayo’', correcta: 'Frijol', opciones: ['Frijol', 'Siéntate', 'Muchacha', 'Camarón'] },
 ]
+
+// La evaluación corresponde a este módulo: solo se abre después de completarlo.
+const MODULO_1 = '11111111-1111-4111-8111-111111111101'
+
+async function moduloCompletado(usuarioId: string) {
+  const { data, error } = await supabase
+    .from('progreso_usuarios')
+    .select('leccion_id')
+    .eq('usuario_id', usuarioId)
+    .eq('leccion_id', MODULO_1)
+    .eq('completada', true)
+    .maybeSingle()
+  if (error) throw error
+  return !!data
+}
+
+type Estado = 'cargando' | 'error' | 'bloqueada' | 'llenando' | 'enviando' | 'enviada'
 
 export default function Encuesta() {
   const { session } = useAuth()
-  const [estado, setEstado] = useState<'cargando' | 'llenando' | 'enviando' | 'enviada'>('cargando')
+  const [estado, setEstado] = useState<Estado>('cargando')
   const [likert, setLikert] = useState<Partial<Record<Likert['clave'], number>>>({})
   const [lexicos, setLexicos] = useState<(string | null)[]>(LEXICOS.map(() => null))
   const [opciones] = useState(() => LEXICOS.map((l) => mezclar(l.opciones)))
   const [comentario, setComentario] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [intento, setIntento] = useState(0)
 
   useEffect(() => {
     if (!session) return
-    supabase
-      .from('encuestas_usabilidad')
-      .select('id')
-      .eq('usuario_id', session.user.id)
-      .maybeSingle()
-      .then(({ data, error }) => {
-        if (error) setError(error.message)
-        setEstado(data ? 'enviada' : 'llenando')
+    const uid = session.user.id
+    Promise.all([supabase.from('encuestas_usabilidad').select('id').eq('usuario_id', uid).maybeSingle(), moduloCompletado(uid)])
+      .then(([enc, completado]) => {
+        if (enc.error) throw enc.error
+        setEstado(enc.data ? 'enviada' : completado ? 'llenando' : 'bloqueada')
       })
-  }, [session])
+      .catch((e: { message?: string }) => {
+        setError(e.message ?? String(e))
+        setEstado('error')
+      })
+  }, [session, intento])
+
+  function reintentar() {
+    setError(null)
+    setEstado('cargando')
+    setIntento(intento + 1)
+  }
 
   const claves = [...BLOQUE_EFICIENCIA, ...BLOQUE_SATISFACCION].map((p) => p.clave)
   const completa = claves.every((c) => likert[c]) && lexicos.every(Boolean)
 
   async function enviar() {
+    if (!session) return
     setEstado('enviando')
     setError(null)
-    const { error } = await supabase.from('encuestas_usabilidad').insert({
-      ...likert,
-      aciertos_lexicos: lexicos.filter((r, i) => r === LEXICOS[i].correcta).length,
-      comentario: comentario.trim() || null,
-    })
-    // 23505 = ya había una respuesta de este usuario: se trata como enviada.
-    if (error && error.code !== '23505') {
-      setError(`No se pudo enviar: ${error.message}`)
+    try {
+      // Se vuelve a comprobar por si el progreso cambió desde que se abrió la pantalla.
+      if (!(await moduloCompletado(session.user.id))) return setEstado('bloqueada')
+      const { error } = await supabase.from('encuestas_usabilidad').insert({
+        ...likert,
+        aciertos_lexicos: lexicos.filter((r, i) => r === LEXICOS[i].correcta).length,
+        comentario: comentario.trim() || null,
+      })
+      // 23505 = ya había una respuesta de este usuario: se trata como enviada.
+      if (error && error.code !== '23505') throw error
+      setEstado('enviada')
+    } catch (e) {
+      setError(`No se pudo enviar: ${(e as { message?: string }).message ?? e}`)
       setEstado('llenando')
-    } else setEstado('enviada')
+    }
   }
 
   if (estado === 'cargando') {
     return <SafeAreaView style={[styles.safe, styles.centro]}><ActivityIndicator color={colors.primary} /></SafeAreaView>
+  }
+
+  if (estado === 'error') {
+    return (
+      <SafeAreaView style={[styles.safe, styles.centro]}>
+        <Text style={styles.titulo}>No se pudo abrir la evaluación</Text>
+        <Text style={styles.texto}>Revisa tu conexión e inténtalo de nuevo. ({error})</Text>
+        <View style={{ alignSelf: 'stretch', marginTop: 24, gap: 12 }}>
+          <Button title="Reintentar" onPress={reintentar} />
+          <Button variant="text" title="Volver" onPress={() => router.back()} />
+        </View>
+      </SafeAreaView>
+    )
+  }
+
+  if (estado === 'bloqueada') {
+    return (
+      <SafeAreaView style={[styles.safe, styles.centro]}>
+        <View style={styles.gracias}>
+          <MaterialCommunityIcons name="lock-outline" size={64} color={colors.tertiary} />
+        </View>
+        <Text style={styles.titulo}>Primero completa el Módulo 1</Text>
+        <Text style={styles.texto}>La evaluación mide lo que aprendiste en la lección. Termínala y luego regresa a responderla.</Text>
+        <View style={{ alignSelf: 'stretch', marginTop: 24, gap: 12 }}>
+          <Button title="Ir al Módulo 1" onPress={() => router.replace({ pathname: '/leccion/[id]', params: { id: MODULO_1 } })} />
+          <Button variant="text" title="Volver" onPress={() => router.back()} />
+        </View>
+      </SafeAreaView>
+    )
   }
 
   if (estado === 'enviada') {
@@ -94,7 +154,7 @@ export default function Encuesta() {
         <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Volver" hitSlop={10}>
           <MaterialCommunityIcons name="arrow-left" size={26} color={colors.text} />
         </Pressable>
-        <Text style={styles.headerTitulo}>Evaluación de usabilidad</Text>
+        <Text style={styles.headerTitulo}>Evaluación de aprendizaje y usabilidad</Text>
         <Text style={styles.norma}>ISO 9241-11</Text>
       </View>
 
@@ -103,7 +163,9 @@ export default function Encuesta() {
           <MaterialCommunityIcons name="clipboard-check-outline" size={28} color={colors.secondaryLip} />
           <View style={{ flex: 1 }}>
             <Text style={styles.introTexto}>Ayúdanos a medir la eficacia, eficiencia y satisfacción del módulo de náhuatl.</Text>
-            <Text style={styles.introNota}>Tus respuestas son anónimas y solo se usan con fines académicos.</Text>
+            <Text style={styles.introNota}>
+              Tus respuestas quedan vinculadas a tu cuenta y se tratan de forma confidencial, con fines estadísticos y académicos del TecNM Campus Minatitlán.
+            </Text>
           </View>
         </View>
 
@@ -113,6 +175,7 @@ export default function Encuesta() {
         ))}
 
         <Text style={styles.bloque}>2. Reconocimiento de palabras</Text>
+        <Text style={styles.ayuda}>Selecciona el significado que recuerdes de las palabras practicadas en la lección (retención léxica inmediata).</Text>
         {LEXICOS.map((l, i) => (
           <View key={l.palabra} style={styles.tarjeta}>
             <Text style={styles.pregunta}>

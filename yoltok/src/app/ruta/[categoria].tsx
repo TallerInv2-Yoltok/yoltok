@@ -1,10 +1,11 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router'
 import { useCallback, useState } from 'react'
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
 import { Encabezado } from '@/components/encabezado'
+import { AvisoInferior, type Aviso } from '@/components/hoja'
 import { useAuth } from '@/lib/auth'
 import { estadosRuta, type Estado, type Leccion } from '@/lib/ruta'
 import { supabase } from '@/lib/supabase'
@@ -25,6 +26,7 @@ export default function Ruta() {
   const [nodos, setNodos] = useState<Nodo[] | null>(null)
   const [palabra, setPalabra] = useState<Palabra | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [aviso, setAviso] = useState<Aviso | null>(null)
 
   // Al volver de una lección se recarga para mostrar el avance.
   useFocusEffect(useCallback(() => {
@@ -52,9 +54,9 @@ export default function Ruta() {
 
   function tocarNodo(n: Nodo) {
     if (n.estado === 'bloqueada') {
-      Alert.alert('Lección bloqueada', `Completa primero «${actual?.titulo}» para desbloquear esta lección.`)
+      setAviso({ icono: 'lock-outline', titulo: 'Lección bloqueada', texto: `Completa primero «${actual?.titulo}» para desbloquear esta lección.` })
     } else if (n.estado === 'proximamente') {
-      Alert.alert('Próximamente', 'Esta lección todavía se está preparando.')
+      setAviso({ icono: 'clock-outline', titulo: 'Lección en preparación', texto: 'Esta lección todavía se está preparando. ¡Pronto podrás practicarla!' })
     } else {
       router.push({ pathname: '/leccion/[id]', params: { id: n.id } })
     }
@@ -111,6 +113,7 @@ export default function Ruta() {
           )}
         </ScrollView>
       )}
+      <AvisoInferior aviso={aviso} onCerrar={() => setAviso(null)} />
     </SafeAreaView>
   )
 }

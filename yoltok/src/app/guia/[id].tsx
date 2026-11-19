@@ -6,11 +6,9 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 
 import { BotonAudio } from '@/components/audio'
 import { Button } from '@/components/ui'
-import type { Ejercicio } from '@/lib/quiz'
+import { vocabulario, type Ejercicio, type Vocablo as Palabra } from '@/lib/quiz'
 import { supabase } from '@/lib/supabase'
 import { colors, fonts } from '@/theme'
-
-type Palabra = NonNullable<Ejercicio['palabra']>
 
 // Guía de la lección (diseño "guia_de_la_etapa_1_yoltok"): notas fijas + las expresiones de la lección.
 // Los textos fijos vienen del diseño de Stitch; validarlos con el equipo y los hablantes.
@@ -23,13 +21,12 @@ export default function Guia() {
   useEffect(() => {
     Promise.all([
       supabase.from('lecciones').select('titulo').eq('id', id).maybeSingle(),
-      supabase.from('ejercicios').select('orden, palabra:palabras(palabra_nahuat, traduccion_espanol, audio_path, descripcion)').eq('leccion_id', id).order('orden'),
+      supabase.from('ejercicios').select('tipo, opciones, orden, palabra:palabras(palabra_nahuat, traduccion_espanol, audio_path, descripcion)').eq('leccion_id', id).order('orden'),
     ]).then(([l, e]) => {
       const fallo = l.error ?? e.error
       if (fallo) return setError(fallo.message)
       setTitulo(l.data?.titulo ?? '')
-      const lista = ((e.data ?? []) as unknown as Pick<Ejercicio, 'palabra'>[]).flatMap((x) => (x.palabra ? [x.palabra] : []))
-      setPalabras([...new Map(lista.map((p) => [p.palabra_nahuat, p])).values()])
+      setPalabras(vocabulario((e.data ?? []) as unknown as Ejercicio[]))
     })
   }, [id])
 

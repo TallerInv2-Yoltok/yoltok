@@ -1,10 +1,11 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { router, useFocusEffect } from 'expo-router'
 import { useCallback, useState, type ComponentProps } from 'react'
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
 import { Encabezado } from '@/components/encabezado'
+import { AvisoInferior, type Aviso } from '@/components/hoja'
 import { Arcos } from '@/components/ornamentos'
 import { PalabraDelDia } from '@/components/palabra-del-dia'
 import { useAuth } from '@/lib/auth'
@@ -26,6 +27,7 @@ export default function Categorias() {
   const { session } = useAuth()
   const [tarjetas, setTarjetas] = useState<Tarjeta[] | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [aviso, setAviso] = useState<Aviso | null>(null)
 
   useFocusEffect(useCallback(() => {
     if (!session) return // al cerrar sesión la pantalla aún se pinta una vez sin sesión
@@ -48,7 +50,9 @@ export default function Categorias() {
   }, [session]))
 
   function abrir(t: Tarjeta) {
-    if (!t.total) return Alert.alert('Próximamente', `Las lecciones de «${t.nombre}» todavía se están preparando.`)
+    if (!t.total) {
+      return setAviso({ icono: 'lock-outline', titulo: 'Módulo en preparación', texto: `Las lecciones de «${t.nombre}» todavía se están preparando. ¡Pronto estarán disponibles!` })
+    }
     router.push({ pathname: '/ruta/[categoria]', params: { categoria: t.id } })
   }
 
@@ -96,6 +100,7 @@ export default function Categorias() {
           <PalabraDelDia tarjeta />
         </ScrollView>
       )}
+      <AvisoInferior aviso={aviso} onCerrar={() => setAviso(null)} />
     </SafeAreaView>
   )
 }
