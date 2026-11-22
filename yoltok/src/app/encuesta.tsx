@@ -6,28 +6,31 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 
 import { Button } from '@/components/ui'
 import { useAuth } from '@/lib/auth'
-import { mezclar } from '@/lib/quiz'
 import { supabase } from '@/lib/supabase'
 import { colors, fonts } from '@/theme'
 
 // Reactivos del cuestionario final (protocolo: 3 bloques ISO 9241-11). La clave es la columna en Supabase.
-type Likert = { clave: 'navegacion' | 'diseno' | 'instrucciones' | 'motivacion' | 'utilidad'; texto: string }
+type Clave = 'navegacion' | 'diseno' | 'instrucciones' | 'audios' | 'tarjetas' | 'retroalimentacion' | 'motivacion' | 'utilidad' | 'volveria'
+type Likert = { clave: Clave; texto: string }
 
-const BLOQUE_EFICIENCIA: Likert[] = [
-  { clave: 'navegacion', texto: 'Fue fácil navegar y usar la aplicación.' },
-  { clave: 'diseno', texto: 'El diseño visual y los botones son claros e intuitivos.' },
-  { clave: 'instrucciones', texto: 'Las instrucciones de los ejercicios se entendieron bien.' },
+const BLOQUES: { titulo: string; preguntas: Likert[] }[] = [
+  { titulo: 'Bloque 1. Eficiencia y navegación', preguntas: [
+    { clave: 'navegacion', texto: 'Considero que me resultó fácil navegar por las pantallas de la aplicación sin ayuda externa.' },
+    { clave: 'diseno', texto: 'Considero que el diseño visual, los botones y los menús son claros e intuitivos.' },
+    { clave: 'instrucciones', texto: 'Considero que las instrucciones de los ejercicios se comprendieron con facilidad.' },
+  ] },
+  { titulo: 'Bloque 2. Eficacia para el aprendizaje del náhuat', preguntas: [
+    { clave: 'audios', texto: 'Considero que los audios de pronunciación me ayudaron a identificar cómo suenan las palabras en náhuat.' },
+    { clave: 'tarjetas', texto: 'Considero que la estructura de tarjetas y ejercicios interactivos me facilitó recordar el vocabulario básico del módulo.' },
+    { clave: 'retroalimentacion', texto: 'Considero que la retroalimentación inmediata al acertar o equivocarme me ayudó a corregir y reforzar lo aprendido.' },
+  ] },
+  { titulo: 'Bloque 3. Satisfacción y utilidad didáctica', preguntas: [
+    { clave: 'motivacion', texto: 'Considero que las mecánicas de gamificación (puntos XP, vidas y barra de progreso) me motivaron a completar la lección.' },
+    { clave: 'utilidad', texto: 'Considero que la aplicación es una herramienta útil y recomendable para apoyar el aprendizaje inicial del náhuat de la región sur de Veracruz.' },
+    { clave: 'volveria', texto: 'Considero que volvería a utilizar esta aplicación para seguir aprendiendo nuevos módulos de náhuat.' },
+  ] },
 ]
-const BLOQUE_SATISFACCION: Likert[] = [
-  { clave: 'motivacion', texto: 'Los puntos, vidas y retos me motivaron a seguir aprendiendo.' },
-  { clave: 'utilidad', texto: 'La aplicación me sirve para estudiar y preservar el náhuatl.' },
-]
-// Reactivos de retención léxica inmediata: palabras estudiadas en el Módulo 1.
-const LEXICOS = [
-  { palabra: 'Ximotali', correcta: 'Siéntate', opciones: ['Siéntate', 'Camarón', 'Muchacha', 'Pescado'] },
-  { palabra: 'Chagalin', correcta: 'Camarón', opciones: ['Camarón', 'Pescado', 'Pavo / Guajolote', 'Frijol'] },
-  { palabra: 'Ajayo’', correcta: 'Frijol', opciones: ['Frijol', 'Siéntate', 'Muchacha', 'Camarón'] },
-]
+const ESCALA = ['Muy en desacuerdo', 'En desacuerdo', 'Neutral', 'De acuerdo', 'Muy de acuerdo']
 
 // La evaluación corresponde a este módulo: solo se abre después de completarlo.
 const MODULO_1 = '11111111-1111-4111-8111-111111111101'
@@ -49,9 +52,7 @@ type Estado = 'cargando' | 'error' | 'bloqueada' | 'llenando' | 'enviando' | 'en
 export default function Encuesta() {
   const { session } = useAuth()
   const [estado, setEstado] = useState<Estado>('cargando')
-  const [likert, setLikert] = useState<Partial<Record<Likert['clave'], number>>>({})
-  const [lexicos, setLexicos] = useState<(string | null)[]>(LEXICOS.map(() => null))
-  const [opciones] = useState(() => LEXICOS.map((l) => mezclar(l.opciones)))
+  const [likert, setLikert] = useState<Partial<Record<Clave, number>>>({})
   const [comentario, setComentario] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [intento, setIntento] = useState(0)
@@ -76,8 +77,7 @@ export default function Encuesta() {
     setIntento(intento + 1)
   }
 
-  const claves = [...BLOQUE_EFICIENCIA, ...BLOQUE_SATISFACCION].map((p) => p.clave)
-  const completa = claves.every((c) => likert[c]) && lexicos.every(Boolean)
+  const completa = BLOQUES.every((b) => b.preguntas.every((p) => likert[p.clave]))
 
   async function enviar() {
     if (!session) return
@@ -88,7 +88,6 @@ export default function Encuesta() {
       if (!(await moduloCompletado(session.user.id))) return setEstado('bloqueada')
       const { error } = await supabase.from('encuestas_usabilidad').insert({
         ...likert,
-        aciertos_lexicos: lexicos.filter((r, i) => r === LEXICOS[i].correcta).length,
         comentario: comentario.trim() || null,
       })
       // 23505 = ya había una respuesta de este usuario: se trata como enviada.
@@ -154,7 +153,7 @@ export default function Encuesta() {
         <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Volver" hitSlop={10}>
           <MaterialCommunityIcons name="arrow-left" size={26} color={colors.text} />
         </Pressable>
-        <Text style={styles.headerTitulo}>Evaluación de aprendizaje y usabilidad</Text>
+        <Text style={styles.headerTitulo}>Evaluación de usabilidad y aprendizaje</Text>
         <Text style={styles.norma}>ISO 9241-11</Text>
       </View>
 
@@ -162,58 +161,30 @@ export default function Encuesta() {
         <View style={styles.intro}>
           <MaterialCommunityIcons name="clipboard-check-outline" size={28} color={colors.secondaryLip} />
           <View style={{ flex: 1 }}>
-            <Text style={styles.introTexto}>Ayúdanos a medir la eficacia, eficiencia y satisfacción del módulo de náhuatl.</Text>
             <Text style={styles.introNota}>
-              Tus respuestas quedan vinculadas a tu cuenta y se tratan de forma confidencial, con fines estadísticos y académicos del TecNM Campus Minatitlán.
+              Tus respuestas quedan vinculadas a tu cuenta y se tratan de forma confidencial con fines académicos del TecNM Campus Minatitlán.
+            </Text>
+            <Text style={[styles.introNota, { marginTop: 8 }]}>
+              Preguntas 1 a 9: {ESCALA.map((e, i) => `${i + 1} = ${e}`).join(' · ')}
             </Text>
           </View>
         </View>
 
-        <Text style={styles.bloque}>1. Eficiencia y navegación</Text>
-        {BLOQUE_EFICIENCIA.map((p, i) => (
-          <Escala key={p.clave} n={i + 1} p={p} valor={likert[p.clave]} onChange={(v) => setLikert({ ...likert, [p.clave]: v })} />
-        ))}
-
-        <Text style={styles.bloque}>2. Reconocimiento de palabras</Text>
-        <Text style={styles.ayuda}>Selecciona el significado que recuerdes de las palabras practicadas en la lección (retención léxica inmediata).</Text>
-        {LEXICOS.map((l, i) => (
-          <View key={l.palabra} style={styles.tarjeta}>
-            <Text style={styles.pregunta}>
-              <Text style={styles.numero}>{BLOQUE_EFICIENCIA.length + i + 1}. </Text>¿Qué significa «{l.palabra}»?
-            </Text>
-            <View style={styles.opciones}>
-              {opciones[i].map((op) => {
-                const sel = lexicos[i] === op
-                return (
-                  <Pressable
-                    key={op}
-                    onPress={() => setLexicos(lexicos.map((r, j) => (j === i ? op : r)))}
-                    accessibilityRole="radio"
-                    accessibilityState={{ selected: sel }}
-                    style={[styles.opcion, sel && styles.opcionSel]}
-                  >
-                    <Text style={[styles.opcionTexto, sel && { color: '#FFFFFF' }]}>{op}</Text>
-                  </Pressable>
-                )
-              })}
-            </View>
+        {BLOQUES.map((b, ib) => (
+          <View key={b.titulo} style={{ gap: 14 }}>
+            <Text style={styles.bloque}>{b.titulo}</Text>
+            {b.preguntas.map((p, i) => (
+              <Escala key={p.clave} n={ib * 3 + i + 1} p={p} valor={likert[p.clave]} onChange={(v) => setLikert({ ...likert, [p.clave]: v })} />
+            ))}
           </View>
         ))}
 
-        <Text style={styles.bloque}>3. Satisfacción y utilidad</Text>
-        {BLOQUE_SATISFACCION.map((p, i) => (
-          <Escala
-            key={p.clave}
-            n={BLOQUE_EFICIENCIA.length + LEXICOS.length + i + 1}
-            p={p}
-            valor={likert[p.clave]}
-            onChange={(v) => setLikert({ ...likert, [p.clave]: v })}
-          />
-        ))}
-
+        <Text style={styles.bloque}>Pregunta abierta</Text>
         <View style={styles.tarjeta}>
-          <Text style={styles.pregunta}>¿Algún comentario sobre la pronunciación o las palabras?</Text>
-          <Text style={styles.ayuda}>Opcional: si notaste alguna variante de Pajapan o Mecayapan, indícalo aquí.</Text>
+          <Text style={styles.pregunta}>
+            <Text style={styles.numero}>10. </Text>¿Qué mejorarías de la aplicación, de los audios o de los ejercicios para facilitar el aprendizaje del náhuat?
+          </Text>
+          <Text style={styles.ayuda}>Opcional, máximo 1000 caracteres.</Text>
           <TextInput
             value={comentario}
             onChangeText={setComentario}
@@ -277,7 +248,6 @@ const styles = StyleSheet.create({
   },
   contenido: { padding: 16, gap: 14, paddingBottom: 40, maxWidth: 480, width: '100%', alignSelf: 'center' },
   intro: { flexDirection: 'row', gap: 12, backgroundColor: colors.mutedTint, borderRadius: 16, padding: 16 },
-  introTexto: { fontFamily: fonts.title, fontSize: 16, lineHeight: 22, color: colors.text },
   introNota: { fontFamily: fonts.body, fontSize: 13, lineHeight: 18, color: colors.textMuted, marginTop: 4 },
   bloque: { fontFamily: fonts.heading, fontSize: 18, color: colors.primaryDark, marginTop: 8 },
   tarjeta: { backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 2, borderColor: colors.outline, padding: 16, gap: 8 },
@@ -293,13 +263,6 @@ const styles = StyleSheet.create({
   },
   puntoSel: { backgroundColor: colors.primaryDark, borderBottomColor: colors.text },
   puntoTexto: { fontFamily: fonts.heading, fontSize: 18, color: colors.text },
-  opciones: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
-  opcion: {
-    paddingHorizontal: 14, paddingVertical: 10, borderRadius: 9999, backgroundColor: '#FFFFFF',
-    borderWidth: 2, borderColor: colors.outline, borderBottomWidth: 4,
-  },
-  opcionSel: { backgroundColor: colors.secondary, borderColor: colors.secondary, borderBottomColor: colors.secondaryLip },
-  opcionTexto: { fontFamily: fonts.bodyBold, fontSize: 14, color: colors.text },
   comentario: {
     minHeight: 100, textAlignVertical: 'top', backgroundColor: colors.surface, borderRadius: 16, borderWidth: 2,
     borderColor: colors.outlineLip, padding: 14, fontFamily: fonts.body, fontSize: 15, color: colors.text,

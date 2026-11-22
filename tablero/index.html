@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tablero de la encuesta Yoltok</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,500,0,0&display=block">
+<style>
+/* Layout: encabezado con resumen, 5 indicadores, luego los 3 bloques Likert a la izquierda y respuestas por día y comentarios a la derecha. Paleta de la app (crema, jade, dorado). */
+:root {
+  --bg: #F7F4ED; --card: #FFFFFF; --fg: #1F2A2A; --muted: #5E5A52; --line: #E3DCCC; --chip: #EFEAE0;
+  --jade: #1F7A62; --jade-tint: #E2EFE8; --jade-deep: #16403A; --oro: #A8873F; --oro-tint: #F3ECDC; --azul: #2C6E8F;
+  --l1: #B23A2E; --l2: #E0927F; --l3: #CFC6B4; --l4: #7DB8A2; --l5: #1F7A62;
+  --error-tint: #F6E3DD; --error: #8A3B2A;
+  --f-head: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  color-scheme: light;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 500 15px/1.5 var(--f-head); }
+.ms { font-family: 'Material Symbols Rounded'; font-weight: normal; font-style: normal; font-size: 22px; line-height: 1; display: inline-block; width: 1em; overflow: hidden; -webkit-font-smoothing: antialiased; }
+.envoltura { max-width: 1120px; margin: 0 auto; padding-block: 32px 56px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 24px; }
+header { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end; justify-content: space-between; }
+.eyebrow { font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--oro); margin: 0 0 6px; }
+h1 { margin: 0; font-size: clamp(26px, 4vw, 34px); font-weight: 800; color: var(--jade-deep); text-wrap: balance; line-height: 1.15; }
+.sub { margin: 6px 0 0; color: var(--muted); }
+button { font: inherit; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; border: 0; border-radius: 999px; padding: 10px 18px; background: var(--jade); color: var(--card); cursor: pointer; }
+button:hover { filter: brightness(1.08); }
+button:focus-visible { outline: 3px solid var(--oro); outline-offset: 2px; }
+button[disabled] { opacity: .6; cursor: progress; }
+
+.kpis { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 16px; }
+.kpi { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 18px; display: grid; gap: 4px; }
+.kpi .ms { color: var(--jade); background: var(--jade-tint); border-radius: 12px; padding: 8px; width: auto; font-size: 22px; justify-self: start; }
+.kpi .valor { font-size: 32px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.1; margin-top: 8px; }
+.kpi .valor small { font-size: 16px; color: var(--muted); font-weight: 600; }
+.kpi .nombre { color: var(--muted); font-size: 13px; font-weight: 600; }
+
+.rejilla { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 16px; align-items: start; }
+.tarjeta { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 22px; display: grid; gap: 18px; min-width: 0; }
+.tarjeta h2 { margin: 0; font-size: 17px; font-weight: 800; display: flex; align-items: center; gap: 10px; }
+.tarjeta h2 .ms { color: var(--oro); }
+.tarjeta .nota { margin: -10px 0 0; color: var(--muted); font-size: 13px; }
+.bloque { display: grid; gap: 14px; }
+.bloque h3 { margin: 0; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+
+.reactivo { display: grid; gap: 6px; }
+.reactivo .fila { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
+.reactivo .texto { font-size: 14px; min-width: 0; }
+.prom { font-weight: 800; font-variant-numeric: tabular-nums; padding: 2px 10px; border-radius: 999px; font-size: 13px; white-space: nowrap; }
+.prom.alto { background: var(--jade-tint); color: var(--jade-deep); }
+.prom.medio { background: var(--oro-tint); color: var(--oro); }
+.prom.bajo { background: var(--error-tint); color: var(--error); }
+.barra { display: flex; height: 14px; border-radius: 999px; overflow: hidden; background: var(--chip); }
+.barra span { display: block; height: 100%; }
+.leyenda { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--muted); }
+.leyenda i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+
+
+.dias { display: flex; gap: 4px; align-items: flex-end; height: 120px; overflow-x: auto; padding-bottom: 2px; }
+.dia { flex: 1 0 18px; max-width: 46px; background: var(--oro); border-radius: 6px 6px 2px 2px; min-height: 3px; }
+.ejes { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); }
+
+.comentarios { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; max-height: 560px; overflow-y: auto; }
+.comentarios li { background: var(--bg); border-radius: 12px; padding: 12px 14px; display: grid; gap: 4px; }
+.comentarios time { font-size: 12px; color: var(--muted); }
+.comentarios p { margin: 0; overflow-wrap: anywhere; }
+
+.aviso { background: var(--error-tint); color: var(--error); border-radius: 14px; padding: 14px 18px; display: flex; gap: 12px; align-items: flex-start; }
+.aviso code { font-weight: 700; }
+.vacio { color: var(--muted); font-size: 14px; margin: 0; }
+footer { color: var(--muted); font-size: 12px; }
+.cargando { opacity: .55; transition: opacity .2s; }
+
+@media (max-width: 860px) { .rejilla { grid-template-columns: minmax(0, 1fr); } .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="envoltura">
+  <header>
+    <div>
+      <p class="eyebrow">Yoltok · cuestionario de usabilidad ISO 9241-11</p>
+      <h1>Resultados de la encuesta</h1>
+      <p class="sub" id="estado">Cargando respuestas…</p>
+    </div>
+    <button id="actualizar" type="button"><span class="ms" aria-hidden="true">refresh</span>Actualizar</button>
+  </header>
+
+  <div id="aviso" class="aviso" hidden></div>
+
+  <main id="contenido" class="cargando" style="display:grid;gap:24px">
+    <section class="kpis" aria-label="Resumen">
+      <div class="kpi"><span class="ms" aria-hidden="true">groups</span><div class="valor" id="k-total">0</div><div class="nombre">Personas que respondieron</div></div>
+      <div class="kpi"><span class="ms" aria-hidden="true">sentiment_satisfied</span><div class="valor" id="k-sat">–<small> / 5</small></div><div class="nombre">Promedio general (9 reactivos)</div></div>
+      <div class="kpi"><span class="ms" aria-hidden="true">touch_app</span><div class="valor" id="k-b1">–<small> / 5</small></div><div class="nombre">Bloque 1 · Eficiencia</div></div>
+      <div class="kpi"><span class="ms" aria-hidden="true">school</span><div class="valor" id="k-b2">–<small> / 5</small></div><div class="nombre">Bloque 2 · Eficacia</div></div>
+      <div class="kpi"><span class="ms" aria-hidden="true">favorite</span><div class="valor" id="k-b3">–<small> / 5</small></div><div class="nombre">Bloque 3 · Satisfacción</div></div>
+    </section>
+
+    <div class="rejilla">
+      <section class="tarjeta">
+        <h2><span class="ms" aria-hidden="true">bar_chart</span>Escala Likert por reactivo</h2>
+        <p class="nota">1 = muy en desacuerdo, 5 = muy de acuerdo. La barra muestra cuántas personas eligieron cada valor.</p>
+        <div class="leyenda" id="leyenda"></div>
+        <div class="bloque"><h3>Bloque 1 · Eficiencia y navegación</h3><div id="b1" class="bloque"></div></div>
+        <div class="bloque"><h3>Bloque 2 · Eficacia para el aprendizaje del náhuat</h3><div id="b2" class="bloque"></div></div>
+        <div class="bloque"><h3>Bloque 3 · Satisfacción y utilidad didáctica</h3><div id="b3" class="bloque"></div></div>
+      </section>
+
+      <div style="display:grid;gap:16px;min-width:0">
+        <section class="tarjeta">
+          <h2><span class="ms" aria-hidden="true">calendar_month</span>Respuestas por día</h2>
+          <div class="dias" id="dias"></div>
+          <div class="ejes"><span id="dia-ini"></span><span id="dia-fin"></span></div>
+        </section>
+        <section class="tarjeta">
+          <h2><span class="ms" aria-hidden="true">forum</span>10. ¿Qué mejorarías? <span id="n-com" style="color:var(--muted);font-weight:600"></span></h2>
+          <ul class="comentarios" id="comentarios"></ul>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <footer>Datos en vivo de la tabla <code>encuestas_usabilidad</code> en Supabase. Solo se muestran totales, promedios y comentarios, sin nombres ni correos.</footer>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://qvmjwcdiylzytznwtgel.supabase.co'
+// Llave publicable (la misma que va dentro de la app); solo puede llamar lo que RLS y los grants permiten.
+const SUPABASE_KEY = 'sb_publishable_lwI3gnIZBRIpFQ9F_w9dlQ_6TYKiA-p'
+
+const REACTIVOS = {
+  b1: [['navegacion', '1. Me resultó fácil navegar por las pantallas sin ayuda externa.'], ['diseno', '2. El diseño visual, los botones y los menús son claros e intuitivos.'], ['instrucciones', '3. Las instrucciones de los ejercicios se comprendieron con facilidad.']],
+  b2: [['audios', '4. Los audios me ayudaron a identificar cómo suenan las palabras en náhuat.'], ['tarjetas', '5. Las tarjetas y ejercicios interactivos me facilitaron recordar el vocabulario.'], ['retroalimentacion', '6. La retroalimentación inmediata me ayudó a corregir y reforzar lo aprendido.']],
+  b3: [['motivacion', '7. Los puntos XP, vidas y barra de progreso me motivaron a completar la lección.'], ['utilidad', '8. Es una herramienta útil y recomendable para aprender náhuat del sur de Veracruz.'], ['volveria', '9. Volvería a utilizar la aplicación para seguir aprendiendo nuevos módulos.']],
+}
+const ESCALA = ['Muy en desacuerdo', 'En desacuerdo', 'Neutral', 'De acuerdo', 'Muy de acuerdo']
+const $ = (id) => document.getElementById(id)
+const fmt = (n, d = 1) => Number(n).toLocaleString('es-MX', { minimumFractionDigits: d, maximumFractionDigits: d })
+const fecha = (s, o) => new Date(s).toLocaleDateString('es-MX', o ?? { day: 'numeric', month: 'short' })
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])
+
+$('leyenda').innerHTML = ESCALA.map((e, i) => `<span><i style="background:var(--l${i + 1})"></i>${i + 1} ${e}</span>`).join('')
+
+function nivel(p) { return p >= 4 ? 'alto' : p >= 3 ? 'medio' : 'bajo' }
+
+function pintar(d) {
+  const total = d.total ?? 0
+  const likert = d.likert ?? {}
+  $('estado').textContent = total
+    ? `${total} ${total === 1 ? 'respuesta' : 'respuestas'} · última el ${fecha(d.ultima, { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}`
+    : 'Todavía no hay respuestas. Aparecerán aquí en cuanto alguien termine el Módulo 1 y conteste.'
+
+  const prom = (claves) => {
+    const v = claves.map((c) => likert[c]).filter(Boolean).map((l) => Number(l.promedio))
+    return v.length ? fmt(v.reduce((a, b) => a + b, 0) / v.length) : '–'
+  }
+  $('k-total').textContent = total
+  $('k-sat').innerHTML = prom(Object.values(REACTIVOS).flat().map(([c]) => c)) + '<small> / 5</small>'
+  for (const b of Object.keys(REACTIVOS)) $('k-' + b).innerHTML = prom(REACTIVOS[b].map(([c]) => c)) + '<small> / 5</small>'
+
+  for (const [bloque, lista] of Object.entries(REACTIVOS)) {
+    $(bloque).innerHTML = lista.map(([clave, texto]) => {
+      const l = likert[clave]
+      const dist = l?.distribucion ?? [0, 0, 0, 0, 0]
+      const suma = dist.reduce((a, b) => a + b, 0)
+      const tramos = suma ? dist.map((n, i) => n ? `<span style="width:${n / suma * 100}%;background:var(--l${i + 1})" title="${ESCALA[i]}: ${n}"></span>` : '').join('') : ''
+      return `<div class="reactivo"><div class="fila"><span class="texto">${texto}</span>${l ? `<span class="prom ${nivel(l.promedio)}">${fmt(l.promedio)}</span>` : '<span class="prom medio">sin datos</span>'}</div>
+        <div class="barra" role="img" aria-label="${dist.map((n, i) => `${i + 1}: ${n}`).join(', ')}">${tramos}</div></div>`
+    }).join('')
+  }
+
+
+  const dias = d.por_dia ?? []
+  const maxDia = Math.max(1, ...dias.map((x) => x.n))
+  $('dias').innerHTML = dias.length
+    ? dias.map((x) => `<div class="dia" style="height:${x.n / maxDia * 100}%" title="${fecha(x.dia + 'T12:00')}: ${x.n}"></div>`).join('')
+    : '<p class="vacio">Sin respuestas todavía.</p>'
+  $('dia-ini').textContent = dias.length ? fecha(dias[0].dia + 'T12:00') : ''
+  $('dia-fin').textContent = dias.length > 1 ? fecha(dias.at(-1).dia + 'T12:00') : ''
+
+  const coms = d.comentarios ?? []
+  $('n-com').textContent = `(${coms.length})`
+  $('comentarios').innerHTML = coms.length
+    ? coms.map((c) => `<li><time>${fecha(c.fecha, { day: 'numeric', month: 'long', year: 'numeric' })}</time><p>${esc(c.texto)}</p></li>`).join('')
+    : '<li><p class="vacio">Nadie ha dejado comentarios todavía.</p></li>'
+}
+
+async function cargar() {
+  const btn = $('actualizar')
+  btn.disabled = true
+  $('contenido').classList.add('cargando')
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/estadisticas_encuesta`, {
+      method: 'POST', headers: { apikey: SUPABASE_KEY, 'Content-Type': 'application/json' }, body: '{}',
+    })
+    const cuerpo = await r.json()
+    if (!r.ok) throw Object.assign(new Error(cuerpo.message ?? r.statusText), { codigo: cuerpo.code, status: r.status })
+    $('aviso').hidden = true
+    pintar(cuerpo)
+  } catch (e) {
+    const falta = e.codigo === 'PGRST202' || e.status === 404
+    $('aviso').innerHTML = `<span class="ms" aria-hidden="true">error</span><div>${falta
+      ? 'Falta crear la función de estadísticas en Supabase. Abre el SQL Editor del proyecto, pega el contenido de <code>DB/encuesta_v2.sql</code> y dale Run. Luego pulsa Actualizar.'
+      : `No se pudieron cargar los datos: ${esc(e.message)}. Revisa tu conexión y pulsa Actualizar.`}</div>`
+    $('aviso').hidden = false
+    $('estado').textContent = 'Sin datos'
+  } finally {
+    btn.disabled = false
+    $('contenido').classList.remove('cargando')
+  }
+}
+
+$('actualizar').addEventListener('click', cargar)
+cargar()
+</script>
+</body>
+</html>

@@ -38,6 +38,17 @@ export function vocabulario(ejercicios: Ejercicio[]): Vocablo[] {
   return [...mapa.values()]
 }
 
+// Ejercicios donde suena el audio de la palabra: se responde eligiendo cómo se escribe en náhuat y la traducción
+// se muestra hasta acertar. Distractores: las siguientes palabras de la lección (fijo, para que no cambien al re-renderizar).
+export function escritura(e: Ejercicio, vocab: Vocablo[]) {
+  const p = e.palabra
+  if (!p?.audio_path || contenido(e).clase !== 'opciones') return null
+  if (e.tipo !== 'comprension_auditiva' && !e.instruccion.includes(p.palabra_nahuat)) return null
+  const i = Math.max(0, vocab.findIndex((v) => v.palabra_nahuat === p.palabra_nahuat))
+  const otras = [...vocab.slice(i + 1), ...vocab.slice(0, i)].map((v) => v.palabra_nahuat).filter((n) => n !== p.palabra_nahuat)
+  return { opciones: [p.palabra_nahuat, ...otras.slice(0, 3)], correcta: p.palabra_nahuat, traduccion: p.traduccion_espanol }
+}
+
 export type Sesion = {
   cola: string[] // ids pendientes; el primero es el ejercicio en pantalla
   fallados: string[] // fallados alguna vez (ya no dan XP)

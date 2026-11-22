@@ -8,7 +8,7 @@ import { BotonAudio, detener, reproducir } from '@/components/audio'
 import { HojaInferior } from '@/components/hoja'
 import { Button } from '@/components/ui'
 import { useAuth } from '@/lib/auth'
-import { contenido, mezclar, nuevaSesion, responder, vocabulario, type Ejercicio, type Par, type Sesion, type Vocablo } from '@/lib/quiz'
+import { contenido, escritura, mezclar, nuevaSesion, responder, vocabulario, type Ejercicio, type Par, type Sesion, type Vocablo } from '@/lib/quiz'
 import { supabase } from '@/lib/supabase'
 import { colors, fonts } from '@/theme'
 
@@ -22,6 +22,7 @@ const ETIQUETA: Record<string, string> = {
 }
 // En los auditivos la pregunta no menciona la expresión: se evalúa lo que se escucha, no lo que se lee.
 const INSTRUCCION_AUDITIVA = 'Escucha el audio y selecciona su significado en español'
+const INSTRUCCION_ESCRITURA = 'Escucha el audio y elige cómo se escribe en náhuat'
 
 // Lección: tarjetas de estudio, quiz 2x2 con repaso y vidas, y victoria (diseños de Stitch).
 export default function Leccion() {
@@ -223,8 +224,8 @@ export default function Leccion() {
           <View style={{ alignSelf: 'stretch', gap: 8, marginTop: 24 }}>
             <Button title={ultima ? '¡A practicar!' : 'Continuar'} onPress={() => (ultima ? empezarQuiz() : setTarjeta(tarjeta + 1))} />
             <View style={styles.navTarjetas}>
-              {tarjeta > 0 ? <Button variant="text" title="← Palabra anterior" onPress={() => setTarjeta(tarjeta - 1)} /> : <View />}
-              {!ultima && <Button variant="text" title="Saltar y practicar" onPress={empezarQuiz} />}
+              {tarjeta > 0 && <View style={{ flex: 1 }}><Button variant="outline" title="Anterior" onPress={() => setTarjeta(tarjeta - 1)} /></View>}
+              {!ultima && <View style={{ flex: 1 }}><Button variant="outline" title="Saltar y practicar" onPress={empezarQuiz} /></View>}
             </View>
           </View>
         </ScrollView>
@@ -236,6 +237,7 @@ export default function Leccion() {
   const actual = ejercicios[sesion.cola[0]]
   const hechos = total - new Set(sesion.cola).size
   const c = contenido(actual)
+  const escrita = escritura(actual, palabras)
   const auditivo = actual.tipo === 'comprension_auditiva'
   const audio = actual.palabra?.audio_path
   // Un ejercicio ya fallado no vuelve a dar XP en el repaso.
@@ -251,7 +253,7 @@ export default function Leccion() {
           <Text style={styles.chipTipo}>{ETIQUETA[actual.tipo] ?? 'EJERCICIO'}</Text>
           <Text style={[styles.chipXp, !daXp && styles.chipRepaso]}>{daXp ? `+${actual.puntos} XP` : 'REPASO · SIN XP'}</Text>
         </View>
-        <Text style={styles.pregunta}>{auditivo ? INSTRUCCION_AUDITIVA : actual.instruccion}</Text>
+        <Text style={styles.pregunta}>{escrita ? INSTRUCCION_ESCRITURA : auditivo ? INSTRUCCION_AUDITIVA : actual.instruccion}</Text>
         {auditivo && audio ? (
           <View style={styles.audioCentral}>
             <BotonAudio key={llave} audioPath={audio} etiqueta="la expresión del ejercicio" tamano={112} />
@@ -267,33 +269,39 @@ export default function Leccion() {
           )
         )}
         {c.clase === 'opciones' ? (
-          <Opciones key={llave} opciones={c.opciones} correcta={c.correcta} bloqueado={!!resultado} onEvaluar={evaluar} />
+          <Opciones key={llave} {...(escrita ?? c)} bloqueado={!!resultado} onEvaluar={evaluar} />
         ) : (
           <Pares key={llave} pares={c.pares} bloqueado={!!resultado} onEvaluar={evaluar} />
         )}
       </ScrollView>
 
-      {resultado && (
-        <View style={[styles.hoja, resultado.correcto ? styles.hojaBien : styles.hojaMal]} accessibilityLiveRegion="assertive">
-          <View style={styles.hojaFila}>
-            <View style={[styles.hojaIcono, { backgroundColor: resultado.correcto ? colors.primary : colors.error }]}>
-              <MaterialCommunityIcons name={resultado.correcto ? 'check-bold' : 'close-thick'} size={28} color="#FFFFFF" />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.hojaTitulo, { color: resultado.correcto ? colors.primaryDark : colors.errorLip }]}>
-                {resultado.correcto ? '¡Kwali! Excelente trabajo' : 'Respuesta incorrecta'}
-              </Text>
-              <Text style={[styles.hojaDetalle, { color: resultado.correcto ? colors.text : colors.errorLip }]}>{resultado.detalle}</Text>
-              {!resultado.correcto && <Text style={styles.hojaNota}>Se agregará al repaso final de la lección.</Text>}
-            </View>
-            {/* Volver a escuchar la expresión antes de seguir (refuerza la retención). */}
-            {c.clase === 'opciones' && audio && actual.palabra && (
-              <BotonAudio audioPath={audio} etiqueta={actual.palabra.palabra_nahuat} tamano={44} />
+      {resultado && (() => {
+        const bien = resultado.correcto
+        // Tarjeta con la palabra: al acertar, con su traducción; al fallar, solo la escritura correcta (si se pedía escribirla).
+        const tarjetaPalabra = c.clase === 'opciones' && actual.palabra && (bien || escrita) ? actual.palabra : null
+        const repaso = 'Se agregará al repaso final de la lección.'
+        return (
+          <HojaInferior
+            visible
+            icono={<MaterialCommunityIcons name={bien ? 'party-popper' : 'close-thick'} size={48} color={bien ? colors.primary : colors.error} />}
+            fondoIcono={bien ? colors.primaryTint : colors.errorTint}
+            titulo={bien ? '¡Kwali! ¡Correcto!' : 'Incorrecto'}
+            texto={bien ? (tarjetaPalabra ? 'Excelente trabajo. Esto es lo que significa:' : resultado.detalle) : tarjetaPalabra ? `La forma correcta es esta. ${repaso}` : `${resultado.detalle}. ${repaso}`}
+          >
+            {tarjetaPalabra && (
+              <View style={[styles.resTarjeta, bien ? styles.resTarjetaBien : styles.resTarjetaMal]} accessibilityLiveRegion="assertive">
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.resPalabra}>{tarjetaPalabra.palabra_nahuat}</Text>
+                  {bien && <Text style={styles.resTraduccion}>{tarjetaPalabra.traduccion_espanol}</Text>}
+                </View>
+                {/* Volver a escuchar la expresión antes de seguir (refuerza la retención). */}
+                {audio && <BotonAudio audioPath={audio} etiqueta={tarjetaPalabra.palabra_nahuat} tamano={52} />}
+              </View>
             )}
-          </View>
-          <BotonHoja correcto={resultado.correcto} onPress={continuar} />
-        </View>
-      )}
+            <BotonHoja correcto={bien} onPress={continuar} />
+          </HojaInferior>
+        )
+      })()}
       {salida}
       <HojaInferior
         visible={sinVidas}
@@ -325,9 +333,10 @@ function Cabecera({ avance, etiqueta, vidas, onSalir }: { avance: number; etique
   )
 }
 
-function Opciones({ opciones, correcta, bloqueado, onEvaluar }: {
-  opciones: string[]; correcta: string; bloqueado: boolean; onEvaluar: (correcto: boolean, detalle: string) => void
+function Opciones({ opciones, correcta, traduccion, bloqueado, onEvaluar }: {
+  opciones: string[]; correcta: string; traduccion?: string; bloqueado: boolean; onEvaluar: (correcto: boolean, detalle: string) => void
 }) {
+  const acierto = traduccion ? `«${correcta}» significa «${traduccion}».` : `«${correcta}» es correcto.`
   const [orden] = useState(() => mezclar(opciones))
   const [elegida, setElegida] = useState<string | null>(null)
 
@@ -359,7 +368,7 @@ function Opciones({ opciones, correcta, bloqueado, onEvaluar }: {
           <Button
             title="Comprobar"
             disabled={!elegida}
-            onPress={() => onEvaluar(elegida === correcta, elegida === correcta ? `«${correcta}» es correcto.` : `Respuesta correcta: ${correcta}`)}
+            onPress={() => onEvaluar(elegida === correcta, elegida === correcta ? acierto : `Respuesta correcta: ${correcta}`)}
           />
         </View>
       )}
@@ -582,7 +591,7 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch', alignItems: 'center', gap: 10, backgroundColor: '#FFFFFF', borderRadius: 24, padding: 24,
     borderWidth: 2, borderColor: colors.outline, borderBottomWidth: 6, borderBottomColor: colors.outlineLip,
   },
-  navTarjetas: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 4 },
+  navTarjetas: { flexDirection: 'row', gap: 10, marginTop: 4 },
   escuchar: { fontFamily: fonts.heading, fontSize: 13, letterSpacing: 0.5, color: colors.secondaryLip },
   estudioPalabra: { fontFamily: fonts.heading, fontSize: 40, lineHeight: 48, color: colors.text, textAlign: 'center', marginTop: 8 },
   estudioTraduccion: { fontFamily: fonts.body, fontSize: 22, color: colors.textMuted, textAlign: 'center' },
@@ -611,14 +620,11 @@ const styles = StyleSheet.create({
   fichaNahuat: { fontFamily: fonts.bodyBold, flexShrink: 1 },
   paresFallo: { flexDirection: 'row', gap: 8, alignItems: 'center', backgroundColor: colors.errorTint, borderRadius: 12, padding: 12 },
   paresFalloTexto: { flex: 1, fontFamily: fonts.semibold, fontSize: 14, lineHeight: 20, color: colors.errorLip },
-  hoja: { position: 'absolute', left: 0, right: 0, bottom: 0, padding: 16, paddingBottom: 32, gap: 16, borderTopWidth: 2 },
-  hojaBien: { backgroundColor: colors.primaryTint, borderTopColor: colors.primary },
-  hojaMal: { backgroundColor: colors.errorTint, borderTopColor: colors.error },
-  hojaFila: { flexDirection: 'row', gap: 14, alignItems: 'center' },
-  hojaIcono: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center' },
-  hojaTitulo: { fontFamily: fonts.heading, fontSize: 20 },
-  hojaDetalle: { fontFamily: fonts.bodyBold, fontSize: 15, lineHeight: 22, marginTop: 2 },
-  hojaNota: { fontFamily: fonts.body, fontSize: 13, color: colors.errorLip, marginTop: 4 },
+  resTarjeta: { flexDirection: 'row', alignItems: 'center', gap: 14, borderRadius: 18, borderWidth: 2, paddingVertical: 16, paddingHorizontal: 18 },
+  resTarjetaBien: { backgroundColor: colors.primaryTint, borderColor: colors.primary },
+  resTarjetaMal: { backgroundColor: colors.errorTint, borderColor: colors.error },
+  resPalabra: { fontFamily: fonts.heading, fontSize: 26, lineHeight: 32, color: colors.text },
+  resTraduccion: { fontFamily: fonts.title, fontSize: 20, lineHeight: 26, color: colors.primaryText, marginTop: 2 },
   botonHoja: {
     height: 52, borderRadius: 9999, borderBottomWidth: 4, flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center',
   },

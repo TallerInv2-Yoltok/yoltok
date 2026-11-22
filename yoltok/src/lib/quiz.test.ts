@@ -1,5 +1,5 @@
 // Ejecutar con: node src/lib/quiz.test.ts
-import { contenido, mezclar, nuevaSesion, responder, vocabulario, type Ejercicio } from './quiz.ts'
+import { contenido, escritura, mezclar, nuevaSesion, responder, vocabulario, type Ejercicio } from './quiz.ts'
 
 function igual(real: unknown, esperado: unknown, que: string) {
   if (JSON.stringify(real) !== JSON.stringify(esperado)) throw new Error(`${que}: esperaba ${JSON.stringify(esperado)}, salió ${JSON.stringify(real)}`)
@@ -39,4 +39,9 @@ igual(voc.map((v) => v.palabra_nahuat), ['Ximotali', 'Tago', 'Wewehcho', 'Ajayo�
 igual(voc[3].audio_path, 'ajayo_frijol.mp3', 'vocabulario: la palabra que solo viene en pares conserva su audio')
 igual(voc[0].audio_path, 'x.mp3', 'vocabulario: completa el audio que faltaba')
 igual(mezclar([1, 2, 3, 4]).sort(), [1, 2, 3, 4], 'mezclar conserva elementos')
+
+const conAudio = { ...a, instruccion: 'Si dices «Tago»…', palabra: { ...pal('Tago', 't.mp3'), traduccion_espanol: 'Muchacha' } }
+igual(escritura(conAudio, voc), { opciones: ['Tago', 'Wewehcho', 'Ajayo’', 'Ximotali'], correcta: 'Tago', traduccion: 'Muchacha' }, 'escritura: náhuat + 3 distractores')
+igual(escritura({ ...conAudio, instruccion: '¿Cómo se dice muchacha?' }, voc), null, 'escritura: no aplica si la pregunta no muestra la palabra')
+igual(escritura({ ...conAudio, palabra: pal('Tago') }, voc), null, 'escritura: no aplica sin audio')
 console.log('quiz.test.ts OK')
