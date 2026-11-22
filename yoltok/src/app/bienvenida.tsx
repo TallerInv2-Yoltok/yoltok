@@ -63,7 +63,7 @@ export default function Bienvenida() {
                 <Text style={styles.marcaChica}>Yoltok</Text>
               </View>
               <Text style={styles.titulo}>Crea tu cuenta</Text>
-              <Text style={styles.subtitulo}>Guarda tu progreso mientras aprendes náhuatl del sur de Veracruz.</Text>
+              <Text style={styles.subtitulo}>Guarda tu progreso mientras aprendes náhuat del sur de Veracruz.</Text>
             </View>
           ) : (
             <View style={styles.cabeza}>

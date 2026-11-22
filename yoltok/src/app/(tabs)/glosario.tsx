@@ -65,15 +65,15 @@ export default function Glosario() {
             <View style={{ gap: 16 }}>
               <View style={styles.hero}>
                 <Text style={styles.heroChip}>TLAHTOLLI · PALABRAS</Text>
-                <Text style={styles.heroTitulo}>Glosario de náhuatl</Text>
-                <Text style={styles.heroTexto}>Consulta el vocabulario del náhuatl del sur de Veracruz y su significado en español.</Text>
+                <Text style={styles.heroTitulo}>Glosario de náhuat</Text>
+                <Text style={styles.heroTexto}>Consulta el vocabulario del náhuat del sur de Veracruz y su significado en español.</Text>
               </View>
               <View style={styles.buscador}>
                 <MaterialCommunityIcons name="magnify" size={22} color={colors.textMuted} />
                 <TextInput
                   value={texto}
                   onChangeText={setTexto}
-                  placeholder="Buscar en náhuatl o español…"
+                  placeholder="Buscar en náhuat o español…"
                   placeholderTextColor={colors.disabledText}
                   accessibilityLabel="Buscar palabra"
                   autoCorrect={false}

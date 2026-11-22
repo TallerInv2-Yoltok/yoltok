@@ -10,7 +10,7 @@ import { supabase } from '@/lib/supabase'
 import { colors, fonts } from '@/theme'
 
 // Reactivos del cuestionario final (protocolo: 3 bloques ISO 9241-11). La clave es la columna en Supabase.
-type Clave = 'navegacion' | 'diseno' | 'instrucciones' | 'audios' | 'tarjetas' | 'retroalimentacion' | 'motivacion' | 'utilidad' | 'volveria'
+type Clave = 'navegacion' | 'diseno' | 'instrucciones' | 'audio_pronunciacion' | 'retencion_vocabulario' | 'retroalimentacion' | 'motivacion' | 'utilidad' | 'continuidad'
 type Likert = { clave: Clave; texto: string }
 
 const BLOQUES: { titulo: string; preguntas: Likert[] }[] = [
@@ -20,14 +20,14 @@ const BLOQUES: { titulo: string; preguntas: Likert[] }[] = [
     { clave: 'instrucciones', texto: 'Considero que las instrucciones de los ejercicios se comprendieron con facilidad.' },
   ] },
   { titulo: 'Bloque 2. Eficacia para el aprendizaje del náhuat', preguntas: [
-    { clave: 'audios', texto: 'Considero que los audios de pronunciación me ayudaron a identificar cómo suenan las palabras en náhuat.' },
-    { clave: 'tarjetas', texto: 'Considero que la estructura de tarjetas y ejercicios interactivos me facilitó recordar el vocabulario básico del módulo.' },
+    { clave: 'audio_pronunciacion', texto: 'Considero que los audios de pronunciación me ayudaron a identificar cómo suenan las palabras en náhuat.' },
+    { clave: 'retencion_vocabulario', texto: 'Considero que la estructura de tarjetas y ejercicios interactivos me facilitó recordar el vocabulario básico del módulo.' },
     { clave: 'retroalimentacion', texto: 'Considero que la retroalimentación inmediata al acertar o equivocarme me ayudó a corregir y reforzar lo aprendido.' },
   ] },
   { titulo: 'Bloque 3. Satisfacción y utilidad didáctica', preguntas: [
     { clave: 'motivacion', texto: 'Considero que las mecánicas de gamificación (puntos XP, vidas y barra de progreso) me motivaron a completar la lección.' },
     { clave: 'utilidad', texto: 'Considero que la aplicación es una herramienta útil y recomendable para apoyar el aprendizaje inicial del náhuat de la región sur de Veracruz.' },
-    { clave: 'volveria', texto: 'Considero que volvería a utilizar esta aplicación para seguir aprendiendo nuevos módulos de náhuat.' },
+    { clave: 'continuidad', texto: 'Considero que volvería a utilizar esta aplicación para seguir aprendiendo nuevos módulos de náhuat.' },
   ] },
 ]
 const ESCALA = ['Muy en desacuerdo', 'En desacuerdo', 'Neutral', 'De acuerdo', 'Muy de acuerdo']
@@ -139,7 +139,7 @@ export default function Encuesta() {
           <MaterialCommunityIcons name="check-decagram" size={72} color={colors.primary} />
         </View>
         <Text style={styles.titulo}>¡Tasohkamati!</Text>
-        <Text style={styles.texto}>Gracias por evaluar Yoltok. Tus respuestas ayudan a preservar el náhuatl del sur de Veracruz.</Text>
+        <Text style={styles.texto}>Gracias por evaluar Yoltok. Tus respuestas ayudan a preservar el náhuat del sur de Veracruz.</Text>
         <View style={{ alignSelf: 'stretch', marginTop: 24 }}>
           <Button title="Volver al inicio" onPress={() => router.dismissAll()} />
         </View>

@@ -135,8 +135,8 @@ const SUPABASE_KEY = 'sb_publishable_lwI3gnIZBRIpFQ9F_w9dlQ_6TYKiA-p'
 
 const REACTIVOS = {
   b1: [['navegacion', '1. Me resultó fácil navegar por las pantallas sin ayuda externa.'], ['diseno', '2. El diseño visual, los botones y los menús son claros e intuitivos.'], ['instrucciones', '3. Las instrucciones de los ejercicios se comprendieron con facilidad.']],
-  b2: [['audios', '4. Los audios me ayudaron a identificar cómo suenan las palabras en náhuat.'], ['tarjetas', '5. Las tarjetas y ejercicios interactivos me facilitaron recordar el vocabulario.'], ['retroalimentacion', '6. La retroalimentación inmediata me ayudó a corregir y reforzar lo aprendido.']],
-  b3: [['motivacion', '7. Los puntos XP, vidas y barra de progreso me motivaron a completar la lección.'], ['utilidad', '8. Es una herramienta útil y recomendable para aprender náhuat del sur de Veracruz.'], ['volveria', '9. Volvería a utilizar la aplicación para seguir aprendiendo nuevos módulos.']],
+  b2: [['audio_pronunciacion', '4. Los audios me ayudaron a identificar cómo suenan las palabras en náhuat.'], ['retencion_vocabulario', '5. Las tarjetas y ejercicios interactivos me facilitaron recordar el vocabulario.'], ['retroalimentacion', '6. La retroalimentación inmediata me ayudó a corregir y reforzar lo aprendido.']],
+  b3: [['motivacion', '7. Los puntos XP, vidas y barra de progreso me motivaron a completar la lección.'], ['utilidad', '8. Es una herramienta útil y recomendable para aprender náhuat del sur de Veracruz.'], ['continuidad', '9. Volvería a utilizar la aplicación para seguir aprendiendo nuevos módulos.']],
 }
 const ESCALA = ['Muy en desacuerdo', 'En desacuerdo', 'Neutral', 'De acuerdo', 'Muy de acuerdo']
 const $ = (id) => document.getElementById(id)
@@ -205,7 +205,7 @@ async function cargar() {
   } catch (e) {
     const falta = e.codigo === 'PGRST202' || e.status === 404
     $('aviso').innerHTML = `<span class="ms" aria-hidden="true">error</span><div>${falta
-      ? 'Falta crear la función de estadísticas en Supabase. Abre el SQL Editor del proyecto, pega el contenido de <code>DB/encuesta_v2.sql</code> y dale Run. Luego pulsa Actualizar.'
+      ? 'Falta crear la función de estadísticas en Supabase. Abre el SQL Editor del proyecto, pega el contenido de <code>DB/encuesta_v3_columnas.sql</code> y dale Run. Luego pulsa Actualizar.'
       : `No se pudieron cargar los datos: ${esc(e.message)}. Revisa tu conexión y pulsa Actualizar.`}</div>`
     $('aviso').hidden = false
     $('estado').textContent = 'Sin datos'

@@ -103,7 +103,7 @@ export default function Ruta() {
             <View style={styles.tarjeta}>
               <View style={styles.tarjetaHeader}>
                 <MaterialCommunityIcons name="translate" size={22} color={colors.secondaryLip} />
-                <Text style={styles.tarjetaTitulo}>Palabra de hoy en náhuatl</Text>
+                <Text style={styles.tarjetaTitulo}>Palabra de hoy en náhuat</Text>
               </View>
               <View style={styles.palabraCaja}>
                 <Text style={styles.palabraNahuat}>{palabra.palabra_nahuat}</Text>

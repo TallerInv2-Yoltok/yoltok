@@ -69,7 +69,7 @@ export default function Categorias() {
         <ScrollView contentContainerStyle={styles.contenido}>
           <View style={{ gap: 6 }}>
             <Text style={styles.titulo}>¿Qué quieres aprender?</Text>
-            <Text style={styles.subtitulo}>Elige una categoría para empezar tu ruta en náhuatl.</Text>
+            <Text style={styles.subtitulo}>Elige una categoría para empezar tu ruta en náhuat.</Text>
           </View>
           <View style={styles.rejilla}>
             {tarjetas.map((t) => {

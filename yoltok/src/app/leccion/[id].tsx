@@ -501,7 +501,7 @@ function Victoria({ sesion, total, vocablos, segundos, guardado, reintentar }: {
         <Text style={styles.finalizada}>LECCIÓN FINALIZADA</Text>
         <Text style={styles.victoriaTitulo}>¡Omoxochiyoti motlahtol!</Text>
         <Text style={styles.victoriaLema}>¡Tu palabra ha florecido!</Text>
-        <Text style={styles.victoriaTexto}>Practicaste {vocablos.length} palabras del náhuatl del sur de Veracruz.</Text>
+        <Text style={styles.victoriaTexto}>Practicaste {vocablos.length} palabras del náhuat del sur de Veracruz.</Text>
 
         <View style={styles.stats}>
           <Stat titulo="XP GANADOS" valor={`+${sesion.xp}`} icono="lightning-bolt" color={colors.tertiary} fondo={colors.tertiaryTint} />

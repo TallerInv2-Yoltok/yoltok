@@ -48,7 +48,7 @@ export default function Guia() {
         <ScrollView contentContainerStyle={styles.contenido}>
           <View style={styles.hero}>
             <Text style={styles.heroChip}>📘 {titulo.toUpperCase()}</Text>
-            <Text style={styles.heroTitulo}>Notas del náhuatl del sur de Veracruz</Text>
+            <Text style={styles.heroTitulo}>Notas del náhuat del sur de Veracruz</Text>
             <Text style={styles.heroTexto}>Consejos rápidos y fonética clave antes de iniciar tu práctica.</Text>
           </View>
 

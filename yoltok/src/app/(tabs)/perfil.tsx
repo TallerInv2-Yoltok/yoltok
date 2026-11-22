@@ -126,8 +126,8 @@ export default function Perfil() {
             <MaterialCommunityIcons name="trophy" size={28} color={colors.tertiary} />
             <Text style={styles.avisoTexto}>
               {datos.encuesta
-                ? '¡Tasohkamati! Ya completaste tu evaluación. Tus respuestas fortalecen la preservación del náhuatl.'
-                : '¡Estás a un paso de concluir la prueba de Yoltok! Tus respuestas fortalecen la preservación del náhuatl.'}
+                ? '¡Tasohkamati! Ya completaste tu evaluación. Tus respuestas fortalecen la preservación del náhuat.'
+                : '¡Estás a un paso de concluir la prueba de Yoltok! Tus respuestas fortalecen la preservación del náhuat.'}
             </Text>
           </View>
 
