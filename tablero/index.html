@@ -54,15 +54,22 @@ button[disabled] { opacity: .6; cursor: progress; }
 .prom.alto { background: var(--jade-tint); color: var(--jade-deep); }
 .prom.medio { background: var(--oro-tint); color: var(--oro); }
 .prom.bajo { background: var(--error-tint); color: var(--error); }
-.barra { display: flex; height: 14px; border-radius: 999px; overflow: hidden; background: var(--chip); }
-.barra span { display: block; height: 100%; }
+.barra { display: flex; height: 22px; border-radius: 999px; overflow: hidden; background: var(--chip); }
+.barra span { display: flex; align-items: center; justify-content: center; height: 100%; font-size: 11px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.resumen { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--muted); }
+.resumen b { color: var(--fg); font-variant-numeric: tabular-nums; }
+.resumen .acuerdo b { color: var(--jade); }
+.resumen .desacuerdo b { color: var(--l1); }
 .leyenda { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--muted); }
 .leyenda i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
 
 
-.dias { display: flex; gap: 4px; align-items: flex-end; height: 120px; overflow-x: auto; padding-bottom: 2px; }
-.dia { flex: 1 0 18px; max-width: 46px; background: var(--oro); border-radius: 6px 6px 2px 2px; min-height: 3px; }
-.ejes { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); }
+.dias { display: flex; gap: 8px; height: 170px; overflow-x: auto; padding-bottom: 2px; }
+.dia { flex: 1 0 44px; max-width: 72px; display: grid; grid-template-rows: auto 1fr auto; gap: 4px; text-align: center; }
+.dia .n { font-weight: 800; font-size: 14px; font-variant-numeric: tabular-nums; }
+.dia .pista { display: flex; align-items: flex-end; }
+.dia .pista span { display: block; width: 100%; min-height: 3px; background: var(--oro); border-radius: 6px 6px 2px 2px; }
+.dia .etq { font-size: 11px; color: var(--muted); font-weight: 600; white-space: nowrap; }
 
 .comentarios { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; max-height: 560px; overflow-y: auto; }
 .comentarios li { background: var(--bg); border-radius: 12px; padding: 12px 14px; display: grid; gap: 4px; }
@@ -115,7 +122,6 @@ footer { color: var(--muted); font-size: 12px; }
         <section class="tarjeta">
           <h2><span class="ms" aria-hidden="true">calendar_month</span>Respuestas por día</h2>
           <div class="dias" id="dias"></div>
-          <div class="ejes"><span id="dia-ini"></span><span id="dia-fin"></span></div>
         </section>
         <section class="tarjeta">
           <h2><span class="ms" aria-hidden="true">forum</span>10. ¿Qué mejorarías? <span id="n-com" style="color:var(--muted);font-weight:600"></span></h2>
@@ -168,9 +174,14 @@ function pintar(d) {
       const l = likert[clave]
       const dist = l?.distribucion ?? [0, 0, 0, 0, 0]
       const suma = dist.reduce((a, b) => a + b, 0)
-      const tramos = suma ? dist.map((n, i) => n ? `<span style="width:${n / suma * 100}%;background:var(--l${i + 1})" title="${ESCALA[i]}: ${n}"></span>` : '').join('') : ''
+      const pct = (n) => Math.round(n / suma * 100)
+      // Número dentro de cada tramo si cabe (≥ 7 %); texto claro sobre los colores oscuros (1, 4, 5).
+      const tramos = suma ? dist.map((n, i) => n ? `<span style="width:${n / suma * 100}%;background:var(--l${i + 1});color:${[0, 3, 4].includes(i) ? 'var(--card)' : 'var(--fg)'}" title="${ESCALA[i]}: ${n} (${pct(n)}%)">${n / suma >= 0.07 ? n : ''}</span>` : '').join('') : ''
+      const resumen = suma
+        ? `<div class="resumen"><span>n = ${suma}</span><span class="acuerdo">De acuerdo (4–5): <b>${pct(dist[3] + dist[4])}%</b></span><span>Neutral: <b>${pct(dist[2])}%</b></span><span class="desacuerdo">En desacuerdo (1–2): <b>${pct(dist[0] + dist[1])}%</b></span></div>`
+        : ''
       return `<div class="reactivo"><div class="fila"><span class="texto">${texto}</span>${l ? `<span class="prom ${nivel(l.promedio)}">${fmt(l.promedio)}</span>` : '<span class="prom medio">sin datos</span>'}</div>
-        <div class="barra" role="img" aria-label="${dist.map((n, i) => `${i + 1}: ${n}`).join(', ')}">${tramos}</div></div>`
+        <div class="barra" role="img" aria-label="${dist.map((n, i) => `${i + 1}: ${n}`).join(', ')}">${tramos}</div>${resumen}</div>`
     }).join('')
   }
 
@@ -178,10 +189,8 @@ function pintar(d) {
   const dias = d.por_dia ?? []
   const maxDia = Math.max(1, ...dias.map((x) => x.n))
   $('dias').innerHTML = dias.length
-    ? dias.map((x) => `<div class="dia" style="height:${x.n / maxDia * 100}%" title="${fecha(x.dia + 'T12:00')}: ${x.n}"></div>`).join('')
+    ? dias.map((x) => `<div class="dia"><span class="n">${x.n}</span><div class="pista"><span style="height:${x.n / maxDia * 100}%"></span></div><span class="etq">${fecha(x.dia + 'T12:00')}</span></div>`).join('')
     : '<p class="vacio">Sin respuestas todavía.</p>'
-  $('dia-ini').textContent = dias.length ? fecha(dias[0].dia + 'T12:00') : ''
-  $('dia-fin').textContent = dias.length > 1 ? fecha(dias.at(-1).dia + 'T12:00') : ''
 
   const coms = d.comentarios ?? []
   $('n-com').textContent = `(${coms.length})`
